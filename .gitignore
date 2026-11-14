@@ -1,0 +1,9 @@
+node_modules/
+.env
+*.part
+server/data/raw/
+server/data/cities/
+server/data/preset-index/
+server/dist/
+.expo/
+server/data/api-cache/

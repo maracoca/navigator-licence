@@ -1,0 +1,8 @@
+[
+  {
+    "id": "cluj-napoca",
+    "name": "Cluj-Napoca",
+    "extractUrl": "https://download.geofabrik.de/europe/romania-latest.osm.pbf",
+    "bbox": { "south": 46.73, "west": 23.52, "north": 46.80, "east": 23.68 }
+  }
+]
