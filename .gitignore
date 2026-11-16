@@ -7,3 +7,9 @@ server/data/preset-index/
 server/dist/
 .expo/
 server/data/api-cache/
+
+# Personal notes and AI-assistant instruction files (kept locally, not in the repository)
+docs/ideas.md
+CLAUDE.md
+AGENTS.md
+.claude/
