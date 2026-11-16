@@ -18,6 +18,7 @@ import { createOSMStream } from "osm-pbf-parser-node";
 import type { BBox, CityConfig } from "./cityTypes.js";
 import { CityMeta, FORMAT_VERSION, GRAPH_ARRAYS, StoredPlace, cityDir } from "./cityStore.js";
 import { haversineMeters } from "./geo.js";
+import { isWalkable } from "./walkable.js";
 import { Geometry, Preset, PresetMatcher } from "./presetMatcher.js";
 import { STREET_TAG_KEYS } from "../routing/streetProperties.js";
 
@@ -25,12 +26,6 @@ const SERVER_DIR = fileURLToPath(new URL("../../", import.meta.url));
 const CONFIG_FILE = path.join(SERVER_DIR, "config", "cities.json");
 const RAW_DIR = path.join(SERVER_DIR, "data", "raw");
 
-const WALKABLE_HIGHWAYS = new Set([
-  "footway", "pedestrian", "path", "steps", "living_street", "residential", "service",
-  "unclassified", "tertiary", "secondary", "primary", "track", "cycleway", "bridleway",
-  "corridor", "road", "tertiary_link", "secondary_link", "primary_link",
-]);
-const FOOT_ALLOWED = new Set(["yes", "designated", "permissive"]);
 
 type Tags = Record<string, string>;
 interface OsmNode { type: "node"; id: number; lat: number; lon: number; tags?: Tags }
@@ -59,13 +54,6 @@ async function ensureExtract(url: string): Promise<string> {
   return file;
 }
 
-function isWalkable(tags: Tags): boolean {
-  if (!WALKABLE_HIGHWAYS.has(tags.highway)) return false;
-  const foot = tags.foot;
-  if (foot === "no" || foot === "private") return false;
-  if ((tags.access === "no" || tags.access === "private") && !FOOT_ALLOWED.has(foot)) return false;
-  return true;
-}
 
 function inBBox(b: BBox, lat: number, lng: number): boolean {
   return lat >= b.south && lat <= b.north && lng >= b.west && lng <= b.east;
@@ -366,12 +354,15 @@ function round4(x: number): number {
   return Math.round(x * 1e4) / 1e4;
 }
 
-const id = process.argv[2];
-if (!id) {
-  console.error("Usage: npm run build:city -- <city-id>");
-  process.exit(1);
+// Run only when started as a script, so other scripts can import loadCityConfig without building.
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+  const id = process.argv[2];
+  if (!id) {
+    console.error("Usage: npm run build:city -- <city-id>");
+    process.exit(1);
+  }
+  build(id).catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
 }
-build(id).catch((err) => {
-  console.error(err);
-  process.exit(1);
-});

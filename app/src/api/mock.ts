@@ -79,9 +79,10 @@ export const MOCK_HEALTH: HealthResponse = {
   bbox: { south: 46.73, west: 23.5, north: 46.81, east: 23.7 },
   streetProperties: [
     { id: 'lit', label: 'Lit streets' },
-    { id: 'paved', label: 'Paved streets' },
-    { id: 'no_steps', label: 'No steps' },
-    { id: 'wheelchair', label: 'Wheelchair accessible' },
+    { id: 'paved', label: 'Paved, smooth paths' },
+    { id: 'no_steps', label: 'No stairs' },
+    { id: 'quiet', label: 'Little traffic' },
+    { id: 'sidewalk', label: 'Sidewalks' },
   ],
 };
 
@@ -89,7 +90,8 @@ const COVERAGE: Record<string, Omit<Coverage, 'property' | 'label'>> = {
   lit: { goodWord: 'lit', badWord: 'unlit', goodPercent: 60, badPercent: 10, unknownPercent: 30 },
   paved: { goodWord: 'paved', badWord: 'unpaved', goodPercent: 85, badPercent: 5, unknownPercent: 10 },
   no_steps: { goodWord: 'without steps', badWord: 'with steps', goodPercent: 70, badPercent: 5, unknownPercent: 25 },
-  wheelchair: { goodWord: 'accessible', badWord: 'not accessible', goodPercent: 30, badPercent: 15, unknownPercent: 55 },
+  quiet: { goodWord: 'car-free or residential', badWord: 'along main roads', goodPercent: 75, badPercent: 15, unknownPercent: 10 },
+  sidewalk: { goodWord: 'with a sidewalk or car-free', badWord: 'no sidewalk', goodPercent: 55, badPercent: 10, unknownPercent: 35 },
 };
 
 const STATION: NamedPoint = { name: 'Gara Cluj-Napoca', lat: 46.7845, lng: 23.5862 };
