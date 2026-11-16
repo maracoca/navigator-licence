@@ -9,7 +9,11 @@
     "typecheck": "tsc --noEmit",
     "test": "tsx --test test/*.test.ts",
     "build:city": "tsx src/data/buildCity.ts",
-    "build:presets": "tsx src/understand/buildPresetIndex.ts"
+    "build:presets": "tsx src/understand/buildPresetIndex.ts",
+    "eval": "tsx src/eval/runEval.ts",
+    "eval:check": "tsx src/eval/runEval.ts --check",
+    "report:street-tags": "tsx src/data/streetTagReport.ts",
+    "report:street-tags-world": "tsx src/data/worldStreetTags.ts"
   },
   "dependencies": {
     "@openstreetmap/id-tagging-schema": "^7.3.0",

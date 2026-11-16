@@ -1,0 +1,1059 @@
+[
+  {
+    "id": "dev-01",
+    "request": "I need a pharmacy on the way",
+    "origin": "Piața Mihai Viteazul, Cluj-Napoca",
+    "destination": "Piața Unirii, Cluj-Napoca",
+    "budgetMinutes": 30,
+    "departAt": "2026-11-18T14:30:00+02:00",
+    "expected": {
+      "items": [
+        {
+          "what": "pharmacy",
+          "tags": [
+            "amenity=pharmacy"
+          ],
+          "required": true,
+          "order": null,
+          "count": 1,
+          "pace": "normal",
+          "wish": null
+        }
+      ],
+      "street": [],
+      "unsupported": []
+    },
+    "notes": "simple: single pharmacy, short central walk"
+  },
+  {
+    "id": "dev-02",
+    "request": "Find me a coffee shop before I get to the office",
+    "origin": "Strada Memorandumului 12, Cluj-Napoca",
+    "destination": "The Office, Bulevardul 21 Decembrie 1989 77, Cluj-Napoca",
+    "budgetMinutes": 45,
+    "departAt": "2026-11-19T08:15:00+02:00",
+    "expected": {
+      "items": [
+        {
+          "what": "coffee shop",
+          "tags": [
+            "amenity=cafe",
+            "shop=coffee"
+          ],
+          "required": true,
+          "order": null,
+          "count": 1,
+          "pace": "normal",
+          "wish": null
+        }
+      ],
+      "street": [],
+      "unsupported": []
+    },
+    "notes": "simple: morning coffee on commute"
+  },
+  {
+    "id": "dev-03",
+    "request": "Looking for a supermarket before heading home",
+    "origin": "Piața Mărăști, Cluj-Napoca",
+    "destination": "Strada Fabricii de Zahăr 14, Cluj-Napoca",
+    "budgetMinutes": 40,
+    "departAt": "2026-11-20T18:30:00+02:00",
+    "expected": {
+      "items": [
+        {
+          "what": "supermarket",
+          "tags": [
+            "shop=supermarket"
+          ],
+          "required": true,
+          "order": null,
+          "count": 1,
+          "pace": "normal",
+          "wish": null
+        }
+      ],
+      "street": [],
+      "unsupported": []
+    },
+    "notes": "simple: supermarket in Mărăști"
+  },
+  {
+    "id": "dev-04",
+    "request": "Is there a post office along my route?",
+    "origin": "Parcul Central, Cluj-Napoca",
+    "destination": "Piața Cipariu, Cluj-Napoca",
+    "budgetMinutes": null,
+    "departAt": "2026-11-17T11:00:00+02:00",
+    "expected": {
+      "items": [
+        {
+          "what": "post office",
+          "tags": [
+            "amenity=post_office"
+          ],
+          "required": true,
+          "order": null,
+          "count": 1,
+          "pace": "normal",
+          "wish": null
+        }
+      ],
+      "street": [],
+      "unsupported": []
+    },
+    "notes": "simple: post office, no time limit"
+  },
+  {
+    "id": "dev-05",
+    "request": "Walk me past a florist",
+    "origin": "Strada Clinicilor 3, Cluj-Napoca",
+    "destination": "Piața Lucian Blaga, Cluj-Napoca",
+    "budgetMinutes": 25,
+    "departAt": "2026-11-21T10:30:00+02:00",
+    "expected": {
+      "items": [
+        {
+          "what": "florist",
+          "tags": [
+            "shop=florist"
+          ],
+          "required": true,
+          "order": null,
+          "count": 1,
+          "pace": "normal",
+          "wish": null
+        }
+      ],
+      "street": [],
+      "unsupported": []
+    },
+    "notes": "simple: florist, tight budget"
+  },
+  {
+    "id": "dev-06",
+    "request": "I need to visit a bakery, a bank, and a hardware store on my walk",
+    "origin": "Piața Flora, Mănăștur, Cluj-Napoca",
+    "destination": "Calea Mănăștur 72, Cluj-Napoca",
+    "budgetMinutes": 90,
+    "departAt": "2026-11-18T10:00:00+02:00",
+    "expected": {
+      "items": [
+        {
+          "what": "bakery",
+          "tags": [
+            "shop=bakery"
+          ],
+          "required": true,
+          "order": null,
+          "count": 1,
+          "pace": "normal",
+          "wish": null
+        },
+        {
+          "what": "bank",
+          "tags": [
+            "amenity=bank"
+          ],
+          "required": true,
+          "order": null,
+          "count": 1,
+          "pace": "normal",
+          "wish": null
+        },
+        {
+          "what": "hardware store",
+          "tags": [
+            "shop=hardware",
+            "shop=doityourself"
+          ],
+          "required": true,
+          "order": null,
+          "count": 1,
+          "pace": "normal",
+          "wish": null
+        }
+      ],
+      "street": [],
+      "unsupported": []
+    },
+    "notes": "several places unordered in Mănăștur"
+  },
+  {
+    "id": "dev-07",
+    "request": "Take me by a bookshop and a souvenir shop while walking around the centre",
+    "origin": "Piața Muzeului, Cluj-Napoca",
+    "destination": "Piața Muzeului, Cluj-Napoca",
+    "budgetMinutes": 75,
+    "departAt": "2026-11-21T15:00:00+02:00",
+    "expected": {
+      "items": [
+        {
+          "what": "bookshop",
+          "tags": [
+            "shop=books"
+          ],
+          "required": true,
+          "order": null,
+          "count": 1,
+          "pace": "normal",
+          "wish": null
+        },
+        {
+          "what": "souvenir shop",
+          "tags": [
+            "shop=gift"
+          ],
+          "required": true,
+          "order": null,
+          "count": 1,
+          "pace": "normal",
+          "wish": null
+        }
+      ],
+      "street": [],
+      "unsupported": []
+    },
+    "notes": "loop in city centre, two unordered shops"
+  },
+  {
+    "id": "dev-08",
+    "request": "We want to see a monument and a botanical garden",
+    "origin": "Piața Avram Iancu, Cluj-Napoca",
+    "destination": "Strada Republicii 42, Cluj-Napoca",
+    "budgetMinutes": 150,
+    "departAt": "2026-11-22T11:30:00+02:00",
+    "expected": {
+      "items": [
+        {
+          "what": "monument",
+          "tags": [
+            "historic=monument",
+            "historic=memorial"
+          ],
+          "required": true,
+          "order": null,
+          "count": 1,
+          "pace": "normal",
+          "wish": null
+        },
+        {
+          "what": "botanical garden",
+          "tags": [
+            "leisure=garden",
+            "tourism=attraction"
+          ],
+          "required": true,
+          "order": null,
+          "count": 1,
+          "pace": "normal",
+          "wish": "botanical"
+        }
+      ],
+      "street": [],
+      "unsupported": []
+    },
+    "notes": "Sunday sightseeing, generous budget"
+  },
+  {
+    "id": "dev-09",
+    "request": "I have to drop off dry cleaning and pick up pet food",
+    "origin": "Strada Constantin Brâncuși 55, Cluj-Napoca",
+    "destination": "Piața Hermes, Gheorgheni, Cluj-Napoca",
+    "budgetMinutes": 60,
+    "departAt": "2026-11-19T16:30:00+02:00",
+    "expected": {
+      "items": [
+        {
+          "what": "dry cleaning",
+          "tags": [
+            "shop=dry_cleaning",
+            "shop=laundry"
+          ],
+          "required": true,
+          "order": null,
+          "count": 1,
+          "pace": "normal",
+          "wish": null
+        },
+        {
+          "what": "pet shop",
+          "tags": [
+            "shop=pet"
+          ],
+          "required": true,
+          "order": null,
+          "count": 1,
+          "pace": "normal",
+          "wish": null
+        }
+      ],
+      "street": [],
+      "unsupported": []
+    },
+    "notes": "errands in Gheorgheni"
+  },
+  {
+    "id": "dev-10",
+    "request": "First I want to visit an art gallery, then have dinner at a restaurant",
+    "origin": "Strada Napoca 5, Cluj-Napoca",
+    "destination": "Strada Eroilor 18, Cluj-Napoca",
+    "budgetMinutes": 180,
+    "departAt": "2026-11-20T17:30:00+02:00",
+    "expected": {
+      "items": [
+        {
+          "what": "art gallery",
+          "tags": [
+            "tourism=gallery",
+            "tourism=museum"
+          ],
+          "required": true,
+          "order": 1,
+          "count": 1,
+          "pace": "normal",
+          "wish": null
+        },
+        {
+          "what": "restaurant",
+          "tags": [
+            "amenity=restaurant"
+          ],
+          "required": true,
+          "order": 2,
+          "count": 1,
+          "pace": "normal",
+          "wish": null
+        }
+      ],
+      "street": [],
+      "unsupported": []
+    },
+    "notes": "strict sequence: gallery -> restaurant"
+  },
+  {
+    "id": "dev-11",
+    "request": "Start at a playground for my toddler, afterwards stop at an ice cream parlour",
+    "origin": "Parcul Rozelor, Cluj-Napoca",
+    "destination": "Strada Paul Chinezu, Cluj-Napoca",
+    "budgetMinutes": 120,
+    "departAt": "2026-11-21T14:00:00+02:00",
+    "expected": {
+      "items": [
+        {
+          "what": "playground",
+          "tags": [
+            "leisure=playground"
+          ],
+          "required": true,
+          "order": 1,
+          "count": 1,
+          "pace": "normal",
+          "wish": null
+        },
+        {
+          "what": "ice cream parlour",
+          "tags": [
+            "amenity=ice_cream"
+          ],
+          "required": true,
+          "order": 2,
+          "count": 1,
+          "pace": "normal",
+          "wish": null
+        }
+      ],
+      "street": [],
+      "unsupported": []
+    },
+    "notes": "ordered stops in Grigorescu"
+  },
+  {
+    "id": "dev-12",
+    "request": "Get a haircut first, then buy groceries, and finally stop by a pub",
+    "origin": "Strada Observatorului 82, Zorilor, Cluj-Napoca",
+    "destination": "Piața Zorilor, Cluj-Napoca",
+    "budgetMinutes": 160,
+    "departAt": "2026-11-20T16:00:00+02:00",
+    "expected": {
+      "items": [
+        {
+          "what": "hairdresser",
+          "tags": [
+            "shop=hairdresser"
+          ],
+          "required": true,
+          "order": 1,
+          "count": 1,
+          "pace": "normal",
+          "wish": null
+        },
+        {
+          "what": "grocery store",
+          "tags": [
+            "shop=supermarket",
+            "shop=convenience"
+          ],
+          "required": true,
+          "order": 2,
+          "count": 1,
+          "pace": "normal",
+          "wish": null
+        },
+        {
+          "what": "pub",
+          "tags": [
+            "amenity=pub",
+            "amenity=bar"
+          ],
+          "required": true,
+          "order": 3,
+          "count": 1,
+          "pace": "normal",
+          "wish": null
+        }
+      ],
+      "street": [],
+      "unsupported": []
+    },
+    "notes": "three-step sequence in Zorilor"
+  },
+  {
+    "id": "dev-13",
+    "request": "I need to visit a library, and maybe a bakery if there is one nearby",
+    "origin": "Strada Kogălniceanu 1, Cluj-Napoca",
+    "destination": "Piața Ștefan cel Mare, Cluj-Napoca",
+    "budgetMinutes": 60,
+    "departAt": "2026-11-18T13:00:00+02:00",
+    "expected": {
+      "items": [
+        {
+          "what": "library",
+          "tags": [
+            "amenity=library"
+          ],
+          "required": true,
+          "order": null,
+          "count": 1,
+          "pace": "normal",
+          "wish": null
+        },
+        {
+          "what": "bakery",
+          "tags": [
+            "shop=bakery"
+          ],
+          "required": false,
+          "order": null,
+          "count": 1,
+          "pace": "normal",
+          "wish": null
+        }
+      ],
+      "street": [],
+      "unsupported": []
+    },
+    "notes": "one required, one optional"
+  },
+  {
+    "id": "dev-14",
+    "request": "Walk me to the train station; if we pass a newsagent I'd like to buy a magazine",
+    "origin": "Piața Mihai Viteazul, Cluj-Napoca",
+    "destination": "Piața Gării, Cluj-Napoca",
+    "budgetMinutes": 35,
+    "departAt": "2026-11-19T09:40:00+02:00",
+    "expected": {
+      "items": [
+        {
+          "what": "newsagent",
+          "tags": [
+            "shop=newsagent",
+            "shop=kiosk"
+          ],
+          "required": false,
+          "order": null,
+          "count": 1,
+          "pace": "normal",
+          "wish": null
+        }
+      ],
+      "street": [],
+      "unsupported": []
+    },
+    "notes": "destination is station, optional stop on route"
+  },
+  {
+    "id": "dev-15",
+    "request": "Could we pass by a wine shop, and perhaps a cheese shop if it's not out of the way?",
+    "origin": "Strada Andrei Șaguna, Cluj-Napoca",
+    "destination": "Strada Horea 20, Cluj-Napoca",
+    "budgetMinutes": 50,
+    "departAt": "2026-11-21T17:00:00+02:00",
+    "expected": {
+      "items": [
+        {
+          "what": "wine shop",
+          "tags": [
+            "shop=wine",
+            "shop=alcohol"
+          ],
+          "required": true,
+          "order": null,
+          "count": 1,
+          "pace": "normal",
+          "wish": null
+        },
+        {
+          "what": "cheese shop",
+          "tags": [
+            "shop=cheese",
+            "shop=deli"
+          ],
+          "required": false,
+          "order": null,
+          "count": 1,
+          "pace": "normal",
+          "wish": null
+        }
+      ],
+      "street": [],
+      "unsupported": []
+    },
+    "notes": "required wine shop + optional cheese shop"
+  },
+  {
+    "id": "dev-16",
+    "request": "I want to check out two clothing stores before heading to the mall",
+    "origin": "Piața Unirii, Cluj-Napoca",
+    "destination": "Iulius Mall, Strada Alexandru Vaida Voevod 53B, Cluj-Napoca",
+    "budgetMinutes": 140,
+    "departAt": "2026-11-21T12:00:00+02:00",
+    "expected": {
+      "items": [
+        {
+          "what": "clothing store",
+          "tags": [
+            "shop=clothes"
+          ],
+          "required": true,
+          "order": null,
+          "count": 2,
+          "pace": "normal",
+          "wish": null
+        }
+      ],
+      "street": [],
+      "unsupported": []
+    },
+    "notes": "count=2 clothing stores"
+  },
+  {
+    "id": "dev-17",
+    "request": "Take me past a few viewpoints overlooking the city",
+    "origin": "Strada Emil Racoviță 1, Cluj-Napoca",
+    "destination": "Cetățuia, Cluj-Napoca",
+    "budgetMinutes": 90,
+    "departAt": "2026-11-22T15:30:00+02:00",
+    "expected": {
+      "items": [
+        {
+          "what": "viewpoint",
+          "tags": [
+            "tourism=viewpoint"
+          ],
+          "required": true,
+          "order": null,
+          "pace": "normal",
+          "wish": null
+        }
+      ],
+      "street": [],
+      "unsupported": []
+    },
+    "notes": "count from 'a few' (count omitted since ambiguous) on Gruia/Cetățuia"
+  },
+  {
+    "id": "dev-18",
+    "request": "I only have time for a quick coffee and a brief stop at a kiosk",
+    "origin": "Strada Teodor Mihali 58, Cluj-Napoca",
+    "destination": "FSEGA, Cluj-Napoca",
+    "budgetMinutes": 25,
+    "departAt": "2026-11-18T11:45:00+02:00",
+    "expected": {
+      "items": [
+        {
+          "what": "coffee",
+          "tags": [
+            "amenity=cafe",
+            "shop=coffee"
+          ],
+          "required": true,
+          "order": null,
+          "count": 1,
+          "pace": "quick",
+          "wish": null
+        },
+        {
+          "what": "kiosk",
+          "tags": [
+            "shop=kiosk",
+            "shop=convenience"
+          ],
+          "required": true,
+          "order": null,
+          "count": 1,
+          "pace": "quick",
+          "wish": null
+        }
+      ],
+      "street": [],
+      "unsupported": []
+    },
+    "notes": "pace=quick for both items"
+  },
+  {
+    "id": "dev-19",
+    "request": "I want a long unhurried lunch at a bistro, then a quick visit to a pharmacy",
+    "origin": "Bulevardul Eroilor 10, Cluj-Napoca",
+    "destination": "Strada Universității 7, Cluj-Napoca",
+    "budgetMinutes": 150,
+    "departAt": "2026-11-19T12:30:00+02:00",
+    "expected": {
+      "items": [
+        {
+          "what": "lunch bistro",
+          "tags": [
+            "amenity=restaurant",
+            "amenity=cafe"
+          ],
+          "required": true,
+          "order": 1,
+          "count": 1,
+          "pace": "long",
+          "wish": null
+        },
+        {
+          "what": "pharmacy",
+          "tags": [
+            "amenity=pharmacy"
+          ],
+          "required": true,
+          "order": 2,
+          "count": 1,
+          "pace": "quick",
+          "wish": null
+        }
+      ],
+      "street": [],
+      "unsupported": []
+    },
+    "notes": "mixed pace (long + quick) with order"
+  },
+  {
+    "id": "dev-20",
+    "request": "Let's take a long break at a park on our way to Bună Ziua",
+    "origin": "Piața Cipariu, Cluj-Napoca",
+    "destination": "Strada Bună Ziua 34, Cluj-Napoca",
+    "budgetMinutes": 160,
+    "departAt": "2026-11-22T10:00:00+02:00",
+    "expected": {
+      "items": [
+        {
+          "what": "park",
+          "tags": [
+            "leisure=park"
+          ],
+          "required": true,
+          "order": null,
+          "count": 1,
+          "pace": "long",
+          "wish": null
+        }
+      ],
+      "street": [],
+      "unsupported": []
+    },
+    "notes": "pace=long from 'long break' (no explicit minutes mentioned)"
+  },
+  {
+    "id": "dev-21",
+    "request": "Find an Italian restaurant with outdoor seating for lunch",
+    "origin": "Piața Unirii, Cluj-Napoca",
+    "destination": "Parcul Central, Cluj-Napoca",
+    "budgetMinutes": 110,
+    "departAt": "2026-11-20T13:00:00+02:00",
+    "expected": {
+      "items": [
+        {
+          "what": "Italian restaurant",
+          "tags": [
+            "amenity=restaurant"
+          ],
+          "required": true,
+          "order": null,
+          "count": 1,
+          "pace": "normal",
+          "wish": "Italian cuisine, outdoor seating"
+        }
+      ],
+      "street": [],
+      "unsupported": []
+    },
+    "notes": "mappable wishes: cuisine + outdoor seating"
+  },
+  {
+    "id": "dev-22",
+    "request": "I'd like to visit an Orthodox church and then a cosy cafe",
+    "origin": "Piața Avram Iancu, Cluj-Napoca",
+    "destination": "Strada Iuliu Maniu 14, Cluj-Napoca",
+    "budgetMinutes": 90,
+    "departAt": "2026-11-22T09:30:00+02:00",
+    "expected": {
+      "items": [
+        {
+          "what": "Orthodox church",
+          "tags": [
+            "amenity=place_of_worship"
+          ],
+          "required": true,
+          "order": 1,
+          "count": 1,
+          "pace": "normal",
+          "wish": "Orthodox"
+        },
+        {
+          "what": "cafe",
+          "tags": [
+            "amenity=cafe"
+          ],
+          "required": true,
+          "order": 2,
+          "count": 1,
+          "pace": "normal",
+          "wish": "cosy"
+        }
+      ],
+      "street": [],
+      "unsupported": []
+    },
+    "notes": "mappable religion wish + subjective 'cosy' wish"
+  },
+  {
+    "id": "dev-23",
+    "request": "Take me to a wheelchair-accessible museum",
+    "origin": {
+      "lat": 46.7693,
+      "lng": 23.5899
+    },
+    "destination": {
+      "lat": 46.7712,
+      "lng": 23.5835
+    },
+    "budgetMinutes": 120,
+    "departAt": "2026-11-18T15:00:00+02:00",
+    "expected": {
+      "items": [
+        {
+          "what": "museum",
+          "tags": [
+            "tourism=museum"
+          ],
+          "required": true,
+          "order": null,
+          "count": 1,
+          "pace": "normal",
+          "wish": "wheelchair-accessible"
+        }
+      ],
+      "street": [],
+      "unsupported": []
+    },
+    "notes": "lat/lng origin & destination + wheelchair wish"
+  },
+  {
+    "id": "dev-24",
+    "request": "I need to withdraw some cash and mail a letter",
+    "origin": "Strada Horea 45, Cluj-Napoca",
+    "destination": "Piața Mihai Viteazul, Cluj-Napoca",
+    "budgetMinutes": 45,
+    "departAt": "2026-11-19T14:00:00+02:00",
+    "expected": {
+      "items": [
+        {
+          "what": "ATM",
+          "tags": [
+            "amenity=atm",
+            "amenity=bank"
+          ],
+          "required": true,
+          "order": null,
+          "count": 1,
+          "wish": null
+        },
+        {
+          "what": "post box or post office",
+          "tags": [
+            "amenity=post_box",
+            "amenity=post_office"
+          ],
+          "required": true,
+          "order": null,
+          "count": 1,
+          "wish": null
+        }
+      ],
+      "street": [],
+      "unsupported": []
+    },
+    "notes": "implicit needs -> ATM and post_box/post_office (pace omitted)"
+  },
+  {
+    "id": "dev-25",
+    "request": "My kid urgently needs a restroom and I want to refill my water bottle",
+    "origin": "Parcul Central, Cluj-Napoca",
+    "destination": "Cluj Arena, Cluj-Napoca",
+    "budgetMinutes": 30,
+    "departAt": "2026-11-21T11:20:00+02:00",
+    "expected": {
+      "items": [
+        {
+          "what": "toilets",
+          "tags": [
+            "amenity=toilets"
+          ],
+          "required": true,
+          "order": null,
+          "count": 1,
+          "wish": null
+        },
+        {
+          "what": "drinking water",
+          "tags": [
+            "amenity=drinking_water"
+          ],
+          "required": true,
+          "order": null,
+          "count": 1,
+          "wish": null
+        }
+      ],
+      "street": [],
+      "unsupported": []
+    },
+    "notes": "implicit needs -> toilets + drinking water (pace omitted as ambiguous)"
+  },
+  {
+    "id": "dev-26",
+    "request": "Find me somewhere to sit down for a few minutes and top up my phone battery",
+    "origin": "Bulevardul Nicolae Titulescu 10, Cluj-Napoca",
+    "destination": "Parcul Detunata, Cluj-Napoca",
+    "budgetMinutes": 55,
+    "departAt": "2026-11-20T15:10:00+02:00",
+    "expected": {
+      "items": [
+        {
+          "what": "bench or seating",
+          "tags": [
+            "amenity=bench"
+          ],
+          "required": true,
+          "order": null,
+          "count": 1,
+          "wish": null
+        },
+        {
+          "what": "phone charging point, cafe, or library",
+          "tags": [
+            "amenity=device_charging_station",
+            "amenity=cafe",
+            "amenity=library"
+          ],
+          "required": true,
+          "order": null,
+          "count": 1,
+          "wish": null
+        }
+      ],
+      "street": [],
+      "unsupported": []
+    },
+    "notes": "implicit needs -> seating + device charging (wish=null)"
+  },
+  {
+    "id": "dev-27",
+    "request": "I'm pushing a baby stroller so I absolutely cannot take any stairs, and please use smooth paved paths with proper sidewalks",
+    "origin": "Strada Donath 40, Grigorescu, Cluj-Napoca",
+    "destination": "Parcul Central, Cluj-Napoca",
+    "budgetMinutes": 65,
+    "departAt": "2026-11-21T10:30:00+02:00",
+    "expected": {
+      "items": [],
+      "street": [
+        {
+          "property": "no_steps",
+          "mode": "require"
+        },
+        {
+          "property": "paved",
+          "mode": "prefer"
+        },
+        {
+          "property": "sidewalk",
+          "mode": "prefer"
+        }
+      ],
+      "unsupported": []
+    },
+    "notes": "street prefs: no_steps(require), paved(prefer), sidewalk(prefer), no places"
+  },
+  {
+    "id": "dev-28",
+    "request": "Walk me to a late-night pharmacy; it's dark so well-lit streets are mandatory and I'd prefer quiet roads with sidewalks",
+    "origin": "Strada Paris 30, Cluj-Napoca",
+    "destination": "Piața Mihai Viteazul, Cluj-Napoca",
+    "budgetMinutes": 45,
+    "departAt": "2026-11-21T23:15:00+02:00",
+    "expected": {
+      "items": [
+        {
+          "what": "pharmacy",
+          "tags": [
+            "amenity=pharmacy"
+          ],
+          "required": true,
+          "order": null,
+          "count": 1,
+          "pace": "normal"
+        }
+      ],
+      "street": [
+        {
+          "property": "lit",
+          "mode": "require"
+        },
+        {
+          "property": "quiet",
+          "mode": "prefer"
+        },
+        {
+          "property": "sidewalk",
+          "mode": "prefer"
+        }
+      ],
+      "unsupported": []
+    },
+    "notes": "late night + lit(require), quiet(prefer), sidewalk(prefer), wish omitted"
+  },
+  {
+    "id": "dev-29",
+    "request": "just a well-lit walk home on paved streets without steps, and somewhere sheltered from the wind if possible",
+    "origin": "Piața Unirii, Cluj-Napoca",
+    "destination": "Strada Constantin Brâncuși 110, Cluj-Napoca",
+    "budgetMinutes": null,
+    "departAt": "2026-11-20T22:00:00+02:00",
+    "expected": {
+      "items": [],
+      "street": [
+        {
+          "property": "lit",
+          "mode": "prefer"
+        },
+        {
+          "property": "paved",
+          "mode": "prefer"
+        },
+        {
+          "property": "no_steps",
+          "mode": "prefer"
+        }
+      ],
+      "unsupported": [
+        "sheltered from the wind"
+      ]
+    },
+    "notes": "hard: no places + 3 street prefs + 1 unsupported street wish"
+  },
+  {
+    "id": "dev-30",
+    "request": "hey can u take me to a surfboard shop lol and maybe a quiet little corner store, keep off busy main roads pls",
+    "origin": "Strada Aurel Vlaicu 22, Mărăști, Cluj-Napoca",
+    "destination": "Parcul Între Lacuri, Cluj-Napoca",
+    "budgetMinutes": 70,
+    "departAt": "2026-11-18T17:15:00+02:00",
+    "expected": {
+      "items": [
+        {
+          "what": "surfboard shop",
+          "tags": [
+            "shop=sports"
+          ],
+          "required": true,
+          "order": null,
+          "count": 1,
+          "pace": "normal",
+          "wish": "surfboards"
+        },
+        {
+          "what": "corner store",
+          "tags": [
+            "shop=convenience"
+          ],
+          "required": false,
+          "order": null,
+          "count": 1,
+          "pace": "normal"
+        }
+      ],
+      "street": [
+        {
+          "property": "quiet",
+          "mode": "prefer"
+        }
+      ],
+      "unsupported": []
+    },
+    "notes": "hard: informal tone + rare place in Cluj (surfboard shop) + optional convenience (wish omitted) + quiet"
+  },
+  {
+    "id": "dev-31",
+    "request": "So I'm heading over from Mănăștur towards the city centre after a super long day at work, and before I finally get to Piața Unirii I really need to pick up some medicine at a pharmcy, and oh yeah if we happen to pass a bakery that's still open I might get a loaf of bread too, though that's not essential, and please stick to streets with sidewalks because my feet hurt",
+    "origin": "Piața Flora, Mănăștur, Cluj-Napoca",
+    "destination": "Piața Unirii, Cluj-Napoca",
+    "budgetMinutes": 95,
+    "departAt": "2026-11-19T18:45:00+02:00",
+    "expected": {
+      "items": [
+        {
+          "what": "pharmacy",
+          "tags": [
+            "amenity=pharmacy"
+          ],
+          "required": true,
+          "order": null,
+          "count": 1,
+          "pace": "normal",
+          "wish": null
+        },
+        {
+          "what": "bakery",
+          "tags": [
+            "shop=bakery"
+          ],
+          "required": false,
+          "order": null,
+          "count": 1,
+          "pace": "normal",
+          "wish": null
+        }
+      ],
+      "street": [
+        {
+          "property": "sidewalk",
+          "mode": "prefer"
+        }
+      ],
+      "unsupported": []
+    },
+    "notes": "hard: long rambling request + typo ('pharmcy') + optional bakery + sidewalk preference"
+  }
+]
