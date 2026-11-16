@@ -331,3 +331,42 @@ milder than before) (dev-23); "keep off busy main roads" mapped to `quiet` **and
 gpt-4.1 gets prefer/require right in 11 of 12 cases. gpt-4o (larger, same generation as the mini) helps only partly.
 Cost per token is several times higher than gpt-4o-mini (check current OpenAI pricing); per request it stays at roughly
 a cent or less, since each request sends a few thousand tokens.
+
+---
+
+## E11 — Current (non-deprecated) models (2026-11-16)
+
+**Why:** OpenAI marks `gpt-4o-mini` and `gpt-4.1` as deprecated; both snapshots shut down on 2027-01-14 (replacement
+named: `gpt-6-luna`). Current models are reasoning models with a reasoning-effort setting; `temperature` is accepted
+only with effort `none` (checked with direct API calls: `gpt-6.1-sol` rejects temperature and has no `none`).
+
+**Code change:** the model's reasoning effort is configurable (`LLM_REASONING_EFFORT`); temperature 0 is sent only when
+allowed; the effort is part of the saved-answer key and of each run's record. Earlier runs still replay identically.
+
+**Runs** (same prompt as E9/E10): `gpt-6-luna`/none → `2026-11-16_15-43-44_dev.json`, `gpt-6-luna`/low →
+`2026-11-16_15-46-00_dev.json`, `gpt-6.1-terra`/none → `2026-11-16_15-49-07_dev.json`, `gpt-6.1-sol`/low →
+`2026-11-16_15-52-02_dev.json`. Prices per 1M tokens (input/output) from OpenAI's pricing page on 2026-11-16.
+
+| Metric (31 dev cases) | gpt-4o-mini | gpt-4.1 | **gpt-6-luna none** | gpt-6-luna low | gpt-6.1-terra none | gpt-6.1-sol low |
+|---|---|---|---|---|---|---|
+| Price in / out | $0.15 / $0.60 | $2 / $8 | **$0.10 / $0.50** | $0.10 / $0.50 | $1 / $5 | $2 / $10 |
+| Items P / R | 95.8 / 95.8 | 100 / 100 | 97.9 / 97.9 | 97.9 / 97.9 | 97.9 / 97.9 | 95.9 / 97.9 |
+| Kinds fitting | 86.9 | 85.9 | 93.0 | 89.7 | 100 | 94.4 |
+| required | 97.8 | 100 | 100 | 100 | 97.9 | 93.6 |
+| order | 100 | 100 | 100 | 100 | 100 | 100 |
+| pace | 100 | 100 | 97.6 | 95.1 | 100 | 100 |
+| wish | 95.5 | 93.5 | 95.6 | 93.3 | 95.6 | 93.3 |
+| street prop + mode P / R | 45.5 / 45.5 | 91.7 / 100 | **100 / 100** | 90.9 / 90.9 | 90.9 / 90.9 | 90.9 / 90.9 |
+| unsupported street wish | 100 | 96.8 | 100 | 100 | 100 | 96.8 |
+| understanding time, mean | 3.6 s | 3.1 s | 3.8 s | 5.1 s | 4.8 s | 6.0 s |
+
+**Takeaways**
+- All current models fix the prefer/require problem of `gpt-4o-mini` with the same prompt.
+- More reasoning (effort low, larger models) did not help on this short extraction task; it only made it slower.
+- With 31 cases one case ≈ 3 points, so differences of one or two cases between current models are within noise.
+- Errors shared by all six setups: "botanical" not stored as a wish (dev-08), "overlooking the city" stored as one (dev-17)
+  — worth re-reading these two expected answers.
+- `gpt-6-luna` has no dated snapshot yet; the saved answers keep these runs replayable regardless.
+
+**Decision:** the app now uses `gpt-6-luna` with effort `none` (`server/.env`, documented in `server/.env.example`) —
+the best street results, at or near the top elsewhere, and the cheapest model tested.

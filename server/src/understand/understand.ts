@@ -16,7 +16,7 @@ import { PARAMS } from "../params.js";
 import { STREET_PROPERTIES, streetProperty, type StreetPropertyId } from "../routing/streetProperties.js";
 import type { Item, OsmKind, Pace, StreetPreference, TypicalVisit, Understanding } from "../types.js";
 import { cached } from "../apiCache.js";
-import { embed, llmModel, openai } from "./openai.js";
+import { embed, llmCacheExtra, llmModel, llmParams, openai } from "./openai.js";
 import { indexes, search, type Match } from "./vocabulary.js";
 import { defaultStay } from "../planning/stays.js";
 
@@ -144,10 +144,10 @@ function userMessage(request: string, ends: Endpoints): string {
 async function parseSentence(request: string, ends: Endpoints): Promise<Parsed> {
   const model = llmModel();
   const user = userMessage(request, ends);
-  return cached("llm-parse", { model, prompt: PARSE_PROMPT, request: user }, async () => {
+  return cached("llm-parse", { model, ...llmCacheExtra(), prompt: PARSE_PROMPT, request: user }, async () => {
     const res = await openai().responses.create({
       model,
-      temperature: 0,
+      ...(llmParams() as object),
       input: [
         { role: "system", content: PARSE_PROMPT },
         { role: "user", content: user },
@@ -222,10 +222,10 @@ google: 0 to 2 option ids; choose none when no option is that kind of place.
 Choose only from the listed options. Choose none rather than something that does not fit.
 `.trim();
   const model = llmModel();
-  const out = await cached("llm-pick", { model, system, listing }, async () => {
+  const out = await cached("llm-pick", { model, ...llmCacheExtra(), system, listing }, async () => {
     const res = await openai().responses.create({
       model,
-      temperature: 0,
+      ...(llmParams() as object),
       input: [
         { role: "system", content: system },
         { role: "user", content: listing },

@@ -319,14 +319,14 @@ process.env.API_CACHE = cacheMode;
 const { loadCity } = await import("../data/cityStore.js");
 const { understand } = await import("../understand/understand.js");
 const { planWalk } = await import("../planning/planWalk.js");
-const { llmModel, embeddingModel } = await import("../understand/openai.js");
+const { llmModel, llmReasoningEffort, embeddingModel } = await import("../understand/openai.js");
 const { PARAMS } = await import("../params.js");
 
 const cityId = process.env.CITY?.trim() || "cluj-napoca";
 const started = new Date();
 const t0 = performance.now();
 const deps: Deps = { city: await loadCity(cityId), understand, planWalk };
-console.log(`\nRunning ${cases.length} case(s), cache ${cacheMode}, ${llmModel()} / ${embeddingModel()}, concurrency ${args.concurrency}`);
+console.log(`\nRunning ${cases.length} case(s), cache ${cacheMode}, ${llmModel()}${llmReasoningEffort() ? ` (effort ${llmReasoningEffort()})` : ""} / ${embeddingModel()}, concurrency ${args.concurrency}`);
 
 const results: CaseResult[] = new Array(cases.length);
 let next = 0;
@@ -358,6 +358,7 @@ const run = {
     git: gitInfo(),
     city: cityId,
     llmModel: llmModel(),
+    llmReasoningEffort: llmReasoningEffort(),
     embeddingModel: embeddingModel(),
     cacheMode,
     concurrency: args.concurrency,

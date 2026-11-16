@@ -7,7 +7,7 @@
  * only from those facts, so every answer can be traced to data.
  */
 import { cached } from "../apiCache.js";
-import { llmModel, openai } from "../understand/openai.js";
+import { llmCacheExtra, llmModel, llmParams, openai } from "../understand/openai.js";
 
 export type WishFit = "yes" | "no" | "unknown";
 
@@ -72,10 +72,10 @@ export async function checkWish(request: string, places: WishFacts[]): Promise<M
   if (!request.trim() || places.length === 0) return result;
   const listing = `The person asked for: "${request}"\n\n${places.map((p, i) => describe(p, i + 1)).join("\n")}`;
   const model = llmModel();
-  const out = await cached("llm-wish", { model, system: SYSTEM, listing }, async () => {
+  const out = await cached("llm-wish", { model, ...llmCacheExtra(), system: SYSTEM, listing }, async () => {
     const res = await openai().responses.create({
       model,
-      temperature: 0,
+      ...(llmParams() as object),
       input: [
         { role: "system", content: SYSTEM },
         { role: "user", content: listing },

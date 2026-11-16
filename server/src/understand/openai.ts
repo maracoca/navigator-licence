@@ -10,6 +10,25 @@ export function openai(): OpenAI {
 }
 
 export const llmModel = (): string => process.env.LLM_MODEL?.trim() || "gpt-4o-mini";
+
+/** Reasoning effort for reasoning models ("none", "low", ...); empty = do not send (older models). */
+export const llmReasoningEffort = (): string | null => process.env.LLM_REASONING_EFFORT?.trim() || null;
+
+/**
+ * Sampling settings for every LLM call. Temperature 0 keeps answers as repeatable as possible, but current
+ * models accept it only when reasoning effort is "none" (or not set, for older models).
+ */
+export function llmParams(): { temperature?: number; reasoning?: { effort: string } } {
+  const effort = llmReasoningEffort();
+  if (!effort) return { temperature: 0 };
+  return effort === "none" ? { temperature: 0, reasoning: { effort } } : { reasoning: { effort } };
+}
+
+/** Added to saved-answer keys only when an effort is set, so answers saved for older models still replay. */
+export const llmCacheExtra = (): Record<string, string> => {
+  const effort = llmReasoningEffort();
+  return effort ? { effort } : {};
+};
 export const embeddingModel = (): string => process.env.EMBEDDING_MODEL?.trim() || "text-embedding-3-small";
 
 /** Unit-length embeddings, so cosine similarity is a plain dot product. */
