@@ -254,3 +254,80 @@ walk mean 1.57, median 1.13; stops per plan mean 1.5 (max 3); skipped: 1 over bu
    phone battery was put in the *street* unsupported list (dev-26).
 
 **Not errors of the app:** dev-30 "surfboard shop" → `shop=water_sports`, arguably a better kind than the expected `shop=sports`.
+
+---
+
+## E9 — Six general prompt rules, measured on the dev set (2026-11-16)
+
+**Baseline:** `eval/runs/2026-11-16_15-05-52_dev.json` (the E8 run replayed on clean commit 20c4c4a: identical scores).
+**After:** `eval/runs/2026-11-16_15-13-58_dev.json` (record run).
+
+**Changes** (one per error pattern of E8; written as general rules with examples that appear in neither set — checked
+by searching both sets for the example words; "stick to" was found in a dev and a test sentence and removed):
+1. Decide prefer/require separately for each street preference; polite wishes are "prefer".
+2. A list joined by commas or "and" is not a sequence.
+3. The start and end of the walk are never items. **Code change:** the start and end names are now passed to the model
+   (`/api/understand` takes optional `origin`/`destination`; the app and the eval runner send them).
+4. Details describe what the place is like — never purpose, duration, opening times or optionality.
+5. A quality of a place is never a street preference.
+6. Each separate need is its own item.
+
+**Results**
+| Metric | Before | After |
+|---|---|---|
+| Items P / R | 95.8 % / 95.8 % | 95.8 % / 95.8 % |
+| Kinds fitting an expected tag | 85.9 % | 86.9 % |
+| required | 97.8 % | 97.8 % |
+| **order** | 82.6 % (38/46) | **100 % (46/46)** |
+| count / pace | 100 % / 100 % | 100 % / 100 % |
+| **wish** | 88.6 % (39/44) | **95.5 % (42/44)** |
+| **street, property only, precision** | 73.3 % (11/15) | **100 % (11/11)** |
+| street, property + mode, P / R | 26.7 % / 36.4 % | 45.5 % / 45.5 % |
+| unsupported street wish | 96.8 % | 100 % |
+| all understood required items placed | 96.3 % (26/27) | 92.6 % (25/27) |
+| walk / shortest, mean | 1.57 | 1.36 |
+
+**Remaining errors**
+- **Street mode still over-uses "require"** for polite wishes ("please use smooth paved paths", "pls", "please stick to …")
+  in dev-27, 29, 30, 31, although the rule now says so explicitly. `gpt-4o-mini` does not follow this rule reliably.
+- **Wish placement is unstable:** "an Orthodox church" now kept *Orthodox* in the search phrase instead of the wish
+  (dev-22), so the wish check does not run for it — it was correct in the baseline. "botanical" (dev-08) still not a wish.
+- **dev-26** now correctly gives two items, but "somewhere to sit down" became a café "with seating" (expected: a bench)
+  and the second item no longer fits the 55-min budget — this is why "required items placed" dropped from 26 to 25.
+
+**Recommendation (to be confirmed by the owner):** keep the changes (large gains in order, wish, invented street preferences; no metric got worse except the
+one case explained above).
+
+---
+
+## E10 — Same prompt, stronger models (2026-11-16)
+
+**What:** the E9 prompt and everything else unchanged; only the LLM used by all LLM steps (reading the request, picking
+kinds, judging wishes) is changed with `LLM_MODEL`. Pinned versions. All three accept temperature 0; the newer GPT-5-family
+models were not compared because they do not accept that setting (would need a code change).
+
+Runs: `gpt-4o-mini` → `2026-11-16_15-13-58_dev.json` (E9), `gpt-4o-2024-11-20` → `2026-11-16_15-34-28_dev.json`,
+`gpt-4.1-2025-04-14` → `2026-11-16_15-36-15_dev.json`.
+
+| Metric (31 dev cases) | gpt-4o-mini | gpt-4o | gpt-4.1 |
+|---|---|---|---|
+| Items P / R | 95.8 / 95.8 % | 97.9 / 97.9 % | **100 / 100 %** |
+| Kinds fitting an expected tag | 86.9 % | 84.8 % | 85.9 % |
+| required | 97.8 % | 100 % | **100 %** |
+| order | 100 % | 91.5 % | **100 %** |
+| count / pace | 100 / 100 % | 100 / 100 % | 100 / 100 % |
+| wish | **95.5 %** | 93.3 % | 93.5 % |
+| **street, property + mode, P / R** | 45.5 / 45.5 % | 58.3 / 63.6 % | **91.7 / 100 %** |
+| street, property only, P / R | 100 / 100 % | 91.7 / 100 % | 91.7 / 100 % |
+| unsupported street wish | 100 % | 100 % | 96.8 % |
+| all understood required items placed | 92.6 % | 96.3 % | 96.4 % |
+| understanding time, mean | 3.6 s | 2.8 s | 3.1 s |
+
+**Remaining gpt-4.1 errors:** "a wheelchair-accessible museum" still adds a street preference (no_steps, prefer —
+milder than before) (dev-23); "keep off busy main roads" mapped to `quiet` **and** also listed as unsupported (dev-30);
+"overlooking the city" and "water bottle refill" stored as wishes (dev-17, dev-25); "botanical" not a wish (dev-08).
+
+**Takeaway:** the over-use of "require" was a limitation of the small model, not of the prompt: with the same prompt,
+gpt-4.1 gets prefer/require right in 11 of 12 cases. gpt-4o (larger, same generation as the mini) helps only partly.
+Cost per token is several times higher than gpt-4o-mini (check current OpenAI pricing); per request it stays at roughly
+a cent or less, since each request sends a few thousand tokens.

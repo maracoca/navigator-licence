@@ -12,7 +12,9 @@ The app works in two steps:
 `streetProperties` is the menu of street preferences the app may offer (the user can add one on the review screen).
 
 ## `POST /api/understand`
-Request: `{ "request": "Visit a museum, then grab a quick coffee, and sit on a bench if there's one along the way. Well-lit streets please." }`
+Request: `{ "request": "Visit a museum, then grab a quick coffee, and sit on a bench if there's one along the way. Well-lit streets please.", "origin": "Gara Cluj-Napoca", "destination": "Parcul Central" }`
+
+`origin` and `destination` are optional: the start and end as the user typed them (leave `origin` out for "my location"). They let the server tell the endpoints apart from stops ("before heading to the mall" when the mall is the end of the walk).
 
 Response:
 ```jsonc

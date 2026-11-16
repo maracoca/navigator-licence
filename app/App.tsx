@@ -50,7 +50,11 @@ export default function App() {
     setLoading(true);
     try {
       if (!server) loadHealth();
-      const res = await api.understand({ request: form.request.trim() });
+      const res = await api.understand({
+        request: form.request.trim(),
+        origin: form.originCoords ? undefined : form.origin.trim(),
+        destination: form.destination.trim(),
+      });
       setItems(res.items);
       setStreet(res.street);
       setNotices(res.notices);

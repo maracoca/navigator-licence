@@ -33,7 +33,8 @@ app.post("/api/understand", async (req, res) => {
   const text = typeof req.body?.request === "string" ? req.body.request.trim() : "";
   if (!text) throw new UserError("request is required");
   if (text.length > PARAMS.maxRequestChars.value) throw new UserError(`request must be at most ${PARAMS.maxRequestChars.value} characters`);
-  res.json(await understand(text));
+  const name = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+  res.json(await understand(text, { origin: name(req.body?.origin), destination: name(req.body?.destination) }));
 });
 
 app.post("/api/plan", async (req, res) => {

@@ -86,7 +86,11 @@ const PARSE_PROMPT = `
 You read one request for a walk between two points and list what the person wants to do on the way.
 Return labels only; the app turns them into numbers and searches the map itself.
 
-For each place the person wants to visit or pass, return one item:
+You may be told where the walk starts and ends. The start and the end are never items, even when the request
+mentions them (for example "before I reach X" when X is the end of the walk).
+
+For each place the person wants to visit or pass, return one item. Each separate need is its own item, even when
+one place could serve several of them.
 - phrase: the person's own words for it.
 - label: a short display name, capitalised ("Museum", "Coffee").
 - search: 1 to 3 plain English names of kinds of place where this can be done, as they would appear on a map
@@ -96,11 +100,15 @@ For each place the person wants to visit or pass, return one item:
   Use the thing itself when it is a kind of place ("museum" -> ["museum"]).
   When it is a need rather than a place, name the kinds of place that meet it
   ("charge my phone" -> ["cafe", "library"]; "something sweet" -> ["bakery", "ice cream shop"]).
-- details: every other word that describes which place they want ("gothic", "second-hand", "halal", "with a garden"),
-  in a few words; empty if none. Words about time or optionality do not belong here.
+- details: words that describe what the place itself is like ("gothic", "second-hand", "halal", "with a garden",
+  "that allows dogs"), in a few words; empty if none. Never put here what they will do there ("to meet a friend",
+  "to work on my laptop"), how long they stay (that is pace), when it must be open (the app checks opening hours),
+  or whether it is optional.
 - required: false only if the words make it optional ("if there's one", "along the way", "maybe", "if possible",
   "if there's time"); otherwise true. Listing things or "then" does not make anything optional.
-- order: 1, 2, 3... only when the person states a sequence ("first", "then", "after that", "finally"); otherwise null.
+- order: 1, 2, 3... only when the person states a sequence between stops ("first", "then", "after that", "finally");
+  otherwise null. A list joined by commas or "and" is not a sequence ("a chemist, a shoe repair shop and a key cutter"
+  has no order).
 - count: the number of such places when the person says a number or a plural with a number word; otherwise null.
 - pace: "quick" if they signal a short stay ("quick", "grab", "pop in", "to go"), "long" if they signal a long one
   ("spend time", "explore", "linger", "relax"), otherwise "normal".
@@ -109,23 +117,40 @@ For each place the person wants to visit or pass, return one item:
   a cafe, a church, a park), "long" (an hour or more: a museum, a meal at a restaurant).
 - stay_minutes: only if the person states a duration for this place ("an hour at the museum" -> 60); otherwise null.
 
-Street preferences: only when the person describes the streets or paths themselves, choose from this menu:
+Street preferences: only when the person describes the streets or paths themselves, choose from this menu.
+A quality of a place ("a café that allows dogs") belongs in that place's details, never in street preferences.
 ${STREET_PROPERTIES.map((p) => `- ${p.id}: ${p.description}`).join("\n")}
-mode "require" when they cannot do without it ("no stairs at all"), otherwise "prefer".
+Decide the mode separately for each preference, from the words about that preference only:
+"require" when they say they cannot do without it ("no stairs at all"), otherwise "prefer". A polite request or a
+wish ("please", "I'd like", "if possible") is "prefer", even when another preference in the same request is required.
 A wish about the streets that is not on the menu ("shady", "flat", "scenic") goes in unsupported, in a few words.
 
 Do not add places or preferences the person did not ask for. Do not include the start or the end point as items.
 `.trim();
 
-async function parseSentence(request: string): Promise<Parsed> {
+/** Where the walk starts and ends, as the person typed them; lets the model tell the endpoints apart from stops. */
+export interface Endpoints {
+  origin?: string | null;
+  destination?: string | null;
+}
+
+function userMessage(request: string, ends: Endpoints): string {
+  const lines: string[] = [];
+  if (ends.origin?.trim()) lines.push(`Start of the walk: ${ends.origin.trim()}`);
+  if (ends.destination?.trim()) lines.push(`End of the walk: ${ends.destination.trim()}`);
+  return lines.length ? `${lines.join("\n")}\n\nRequest: ${request}` : request;
+}
+
+async function parseSentence(request: string, ends: Endpoints): Promise<Parsed> {
   const model = llmModel();
-  return cached("llm-parse", { model, prompt: PARSE_PROMPT, request }, async () => {
+  const user = userMessage(request, ends);
+  return cached("llm-parse", { model, prompt: PARSE_PROMPT, request: user }, async () => {
     const res = await openai().responses.create({
       model,
       temperature: 0,
       input: [
         { role: "system", content: PARSE_PROMPT },
-        { role: "user", content: request },
+        { role: "user", content: user },
       ],
       text: { format: { type: "json_schema", name: "walk_request", schema: PARSE_SCHEMA, strict: true } },
     });
@@ -223,8 +248,8 @@ function dedupe(matches: Match[]): Match[] {
 
 // ─── Main ───────────────────────────────────────────────────────────────────
 
-export async function understand(request: string): Promise<Understanding> {
-  const parsed = await parseSentence(request);
+export async function understand(request: string, ends: Endpoints = {}): Promise<Understanding> {
+  const parsed = await parseSentence(request, ends);
   const { osm, google } = await indexes();
 
   const phrases = parsed.items.flatMap((it) => it.search.slice(0, 3));

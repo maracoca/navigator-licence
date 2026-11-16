@@ -59,6 +59,9 @@ export interface StreetPreference {
 
 export interface UnderstandRequest {
   request: string;
+  /** Start and end as typed, so the server does not mistake them for stops. */
+  origin?: string;
+  destination?: string;
 }
 
 export interface UnderstandResponse {

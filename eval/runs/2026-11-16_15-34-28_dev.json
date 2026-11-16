@@ -1,0 +1,7231 @@
+{
+  "meta": {
+    "set": "dev",
+    "file": "eval/dev.json",
+    "fileSha256": "1c01f48cf60cce4538c9c6766411c5db46d5b9ee109fdb2883d865134dcf3b55",
+    "casesInFile": 31,
+    "casesInvalid": 0,
+    "casesRun": 31,
+    "only": null,
+    "problems": [],
+    "warnings": [],
+    "git": {
+      "commit": "20c4c4a63a86f696668dd40c038d9858500db294",
+      "dirty": true,
+      "dirtyFiles": [
+        "M app/App.tsx",
+        " M app/src/api/types.ts",
+        " M docs/api.md",
+        " M docs/experiments.md",
+        " M server/src/eval/runEval.ts",
+        " M server/src/index.ts",
+        " M server/src/understand/understand.ts"
+      ]
+    },
+    "city": "cluj-napoca",
+    "llmModel": "gpt-4o-2024-11-20",
+    "embeddingModel": "text-embedding-3-small",
+    "cacheMode": "record",
+    "concurrency": 1,
+    "params": {
+      "walkingSpeedKmh": {
+        "value": 5,
+        "provenance": "sourced",
+        "note": "Comfortable adult walking speed is about 1.3-1.4 m/s (Bohannon 1997, Age and Ageing 26:15-19); 5 km/h = 1.39 m/s."
+      },
+      "snapMaxMeters": {
+        "value": 150,
+        "provenance": "assumed",
+        "note": "A place or endpoint farther than this from any walkable street is treated as unreachable."
+      },
+      "preferenceMaxExtraPercent": {
+        "value": 12,
+        "provenance": "sourced",
+        "note": "Soft street preferences may make a walk at most this much longer than the shortest. Quercia et al. 2014 ('The Shortest Path to Happiness', ACM Hypertext) found preferred routes were on average about 12% longer than the shortest. Varied in the evaluation."
+      },
+      "preferenceFactorSteps": {
+        "value": 6,
+        "provenance": "cost-limit",
+        "note": "How many preference strengths are tried per walk when looking for the strongest one that stays within the allowed extra length."
+      },
+      "searchSlackMeters": {
+        "value": 1000,
+        "provenance": "assumed",
+        "note": "Without a time budget, a place is a candidate when going start → place → end is at most this much longer (straight line) than start → end."
+      },
+      "candidatesPerItem": {
+        "value": 8,
+        "provenance": "cost-limit",
+        "note": "Closest candidates per requested item handed to the planner. Keeps the exact search small."
+      },
+      "candidatesByRating": {
+        "value": 4,
+        "provenance": "assumed",
+        "note": "Of the candidates per item, this many are the best-rated places within reach; the rest are the ones closest to the route. Without it, small unrated places next to the route crowd out well-known ones."
+      },
+      "wishCheckMaxCandidates": {
+        "value": 20,
+        "provenance": "cost-limit",
+        "note": "For an item with a wish ('modern', 'catholic'), at most this many candidates closest to the route are checked against the wish."
+      },
+      "googleResultsPerSearch": {
+        "value": 20,
+        "provenance": "cost-limit",
+        "note": "Google Text Search returns at most 20 results per request."
+      },
+      "googleTypeMinScore": {
+        "value": 0.5,
+        "provenance": "assumed",
+        "note": "Google is searched for an item only when one of Google's place types is at least this similar (cosine) to the item's phrase. Below it, Google has no category for the thing (e.g. a bench) and only OSM is used."
+      },
+      "presetMinScore": {
+        "value": 0.35,
+        "provenance": "assumed",
+        "note": "An OSM kind of place is used only when it is at least this similar (cosine) to the item's phrase."
+      },
+      "presetTopK": {
+        "value": 10,
+        "provenance": "cost-limit",
+        "note": "OSM kinds of place shown to the LLM when the best matches are close."
+      },
+      "presetClearLead": {
+        "value": 0.05,
+        "provenance": "assumed",
+        "note": "If the best OSM kind of place beats the second by at least this much similarity, it is taken without asking the LLM."
+      },
+      "mergeDistanceMeters": {
+        "value": 40,
+        "provenance": "assumed",
+        "note": "A Google place and an OSM place closer than this, with similar names, are treated as the same place."
+      },
+      "stayBriefMinutes": {
+        "value": 5,
+        "provenance": "assumed",
+        "note": "Typical stay for a 'brief' kind of place (bench, fountain, toilet). To be replaced by measured visit durations where a source exists."
+      },
+      "stayShortMinutes": {
+        "value": 15,
+        "provenance": "assumed",
+        "note": "Typical stay for a 'short' kind of place (coffee to go, a shop)."
+      },
+      "stayMediumMinutes": {
+        "value": 30,
+        "provenance": "assumed",
+        "note": "Typical stay for a 'medium' kind of place (a cafe, a church, a park)."
+      },
+      "stayLongMinutes": {
+        "value": 60,
+        "provenance": "assumed",
+        "note": "Typical stay for a 'long' kind of place (a museum, a restaurant meal)."
+      },
+      "paceQuickFactor": {
+        "value": 0.5,
+        "provenance": "assumed",
+        "note": "A stay the user calls quick is this fraction of the typical stay."
+      },
+      "paceLongFactor": {
+        "value": 1.5,
+        "provenance": "assumed",
+        "note": "A stay the user calls long is this multiple of the typical stay."
+      },
+      "stayStepMinutes": {
+        "value": 5,
+        "provenance": "assumed",
+        "note": "Stays are rounded to this step; also the shortest stay."
+      },
+      "optionalMaxDetourMinutes": {
+        "value": 5,
+        "provenance": "assumed",
+        "note": "An optional ('if there's one along the way') stop may add at most this much walking."
+      },
+      "ratingTiebreakMinutesPerStar": {
+        "value": 1,
+        "provenance": "assumed",
+        "note": "Between otherwise equal plans, one more star of rating is worth this many walking minutes."
+      },
+      "maxSlots": {
+        "value": 7,
+        "provenance": "cost-limit",
+        "note": "Most stops searched exactly. Larger requests keep the first items and say so."
+      },
+      "maxCountPerItem": {
+        "value": 5,
+        "provenance": "cost-limit",
+        "note": "Most stops for one item ('five museums')."
+      },
+      "maxBudgetMinutes": {
+        "value": 600,
+        "provenance": "cost-limit",
+        "note": "Longest time budget accepted."
+      },
+      "maxRequestChars": {
+        "value": 500,
+        "provenance": "cost-limit",
+        "note": "Longest request text accepted."
+      }
+    },
+    "node": "v22.12.0",
+    "startedAt": "2026-11-16T13:34:28.189Z",
+    "durationMs": 105503
+  },
+  "summary": {
+    "understandErrors": 0,
+    "planErrors": 0,
+    "understanding": {
+      "cases": 31,
+      "items": {
+        "precision": {
+          "value": 0.9791666666666666,
+          "num": 47,
+          "n": 48
+        },
+        "recall": {
+          "value": 0.9791666666666666,
+          "num": 47,
+          "n": 48
+        },
+        "f1": 0.9791666666666666
+      },
+      "kindPrecision": {
+        "value": 0.8484848484848485,
+        "num": 56,
+        "n": 66
+      },
+      "fields": {
+        "required": {
+          "value": 1,
+          "num": 47,
+          "n": 47
+        },
+        "order": {
+          "value": 0.9148936170212766,
+          "num": 43,
+          "n": 47
+        },
+        "count": {
+          "value": 1,
+          "num": 46,
+          "n": 46
+        },
+        "pace": {
+          "value": 1,
+          "num": 41,
+          "n": 41
+        },
+        "wish": {
+          "value": 0.9333333333333333,
+          "num": 42,
+          "n": 45
+        }
+      },
+      "street": {
+        "precision": {
+          "value": 0.5833333333333334,
+          "num": 7,
+          "n": 12
+        },
+        "recall": {
+          "value": 0.6363636363636364,
+          "num": 7,
+          "n": 11
+        },
+        "f1": 0.6086956521739131
+      },
+      "streetProperty": {
+        "precision": {
+          "value": 0.9166666666666666,
+          "num": 11,
+          "n": 12
+        },
+        "recall": {
+          "value": 1,
+          "num": 11,
+          "n": 11
+        },
+        "f1": 0.9565217391304348
+      },
+      "unsupportedDetection": {
+        "value": 1,
+        "num": 31,
+        "n": 31
+      }
+    },
+    "planning": {
+      "success": {
+        "value": 1,
+        "num": 31,
+        "n": 31
+      },
+      "requiredAllPlaced": {
+        "value": 0.9629629629629629,
+        "num": 26,
+        "n": 27
+      },
+      "withinBudget": {
+        "value": 1,
+        "num": 29,
+        "n": 29
+      },
+      "walkOverhead": {
+        "mean": 1.3201385392284404,
+        "median": 1.125,
+        "max": 3.142857142857143,
+        "n": 30
+      },
+      "stops": {
+        "mean": 1.5161290322580645,
+        "median": 2,
+        "max": 3,
+        "n": 31
+      },
+      "skipReasons": {
+        "counts": {
+          "over_budget": 1,
+          "no_candidates": 1
+        },
+        "skippedItems": 2,
+        "n": 31
+      },
+      "coverage": {
+        "no_steps": {
+          "good": 100,
+          "bad": 0,
+          "unknown": 0,
+          "n": 3
+        },
+        "paved": {
+          "good": 98.5,
+          "bad": 0,
+          "unknown": 1.5,
+          "n": 2
+        },
+        "sidewalk": {
+          "good": 97,
+          "bad": 1.6666666666666667,
+          "unknown": 1,
+          "n": 3
+        },
+        "lit": {
+          "good": 7,
+          "bad": 0,
+          "unknown": 93,
+          "n": 2
+        },
+        "quiet": {
+          "good": 74.5,
+          "bad": 0,
+          "unknown": 25.5,
+          "n": 2
+        }
+      },
+      "planMs": {
+        "mean": 556.2258064516129,
+        "median": 239,
+        "max": 2399,
+        "n": 31
+      },
+      "understandMs": {
+        "mean": 2841.6451612903224,
+        "median": 3026,
+        "max": 5063,
+        "n": 31
+      }
+    }
+  },
+  "cases": [
+    {
+      "id": "dev-01",
+      "request": "I need a pharmacy on the way",
+      "notes": "simple: single pharmacy, short central walk",
+      "understanding": {
+        "items": [
+          {
+            "id": "i1",
+            "phrase": "a pharmacy on the way",
+            "label": "Pharmacy",
+            "search": [
+              "pharmacy"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "amenity/pharmacy",
+                "name": "Pharmacy Counter",
+                "tags": {
+                  "amenity": "pharmacy"
+                }
+              },
+              {
+                "presetId": "shop/chemist",
+                "name": "Drugstore",
+                "tags": {
+                  "shop": "chemist"
+                }
+              }
+            ],
+            "googleTypes": [
+              "pharmacy",
+              "drugstore"
+            ],
+            "required": true,
+            "order": null,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 5,
+            "stayFixed": false
+          }
+        ],
+        "street": [],
+        "notices": [],
+        "unsupported": []
+      },
+      "plan": {
+        "origin": {
+          "name": "Piața Mihai Viteazu",
+          "lat": 46.7745841,
+          "lng": 23.5900622
+        },
+        "destination": {
+          "name": "Piața Unirii",
+          "lat": 46.7694539,
+          "lng": 23.5892214
+        },
+        "stops": [
+          {
+            "itemId": "i1",
+            "label": "Pharmacy",
+            "name": "dm drogerie markt",
+            "lat": 46.77287,
+            "lng": 23.5898,
+            "source": "both",
+            "wishConfirmed": null,
+            "rating": 3.6,
+            "address": "Strada Regele Ferdinand 22, 26 parter, Cluj-Napoca",
+            "stayMinutes": 5,
+            "arriveMinute": 3
+          }
+        ],
+        "legs": [
+          {
+            "meters": 285,
+            "minutes": 3
+          },
+          {
+            "meters": 572,
+            "minutes": 7
+          }
+        ],
+        "totals": {
+          "walkMinutes": 10,
+          "stayMinutes": 5,
+          "totalMinutes": 15,
+          "budgetMinutes": 30,
+          "withinBudget": true,
+          "staysShortened": false,
+          "shortestWalkMinutes": 9
+        },
+        "coverage": [],
+        "skipped": [],
+        "notices": []
+      },
+      "scores": {
+        "understanding": {
+          "itemsProduced": 1,
+          "itemsExpected": 1,
+          "itemsMatched": 1,
+          "pairs": [
+            {
+              "produced": 0,
+              "expected": 0,
+              "strength": 2,
+              "what": "pharmacy",
+              "label": "Pharmacy",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            }
+          ],
+          "fields": {
+            "required": {
+              "correct": 1,
+              "n": 1
+            },
+            "order": {
+              "correct": 1,
+              "n": 1
+            },
+            "count": {
+              "correct": 1,
+              "n": 1
+            },
+            "pace": {
+              "correct": 1,
+              "n": 1
+            },
+            "wish": {
+              "correct": 1,
+              "n": 1
+            }
+          },
+          "kinds": {
+            "fitting": 1,
+            "total": 2
+          },
+          "wishPairs": [
+            {
+              "what": "pharmacy",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            }
+          ],
+          "street": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "streetProperty": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "unsupported": {
+            "expected": false,
+            "produced": false,
+            "correct": true
+          }
+        },
+        "planning": {
+          "requiredUnderstood": 1,
+          "requiredWithStop": 1,
+          "withinBudget": true,
+          "walkOverhead": 1.1111111111111112,
+          "stops": 1,
+          "skipReasons": [],
+          "coverage": []
+        }
+      },
+      "timing": {
+        "understandMs": 5063,
+        "planMs": 70
+      },
+      "error": null
+    },
+    {
+      "id": "dev-02",
+      "request": "Find me a coffee shop before I get to the office",
+      "notes": "simple: morning coffee on commute",
+      "understanding": {
+        "items": [
+          {
+            "id": "i1",
+            "phrase": "Find me a coffee shop before I get to the office",
+            "label": "Coffee",
+            "search": [
+              "coffee shop"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "shop/coffee",
+                "name": "Coffee Store",
+                "tags": {
+                  "shop": "coffee"
+                }
+              }
+            ],
+            "googleTypes": [
+              "coffee_shop"
+            ],
+            "required": true,
+            "order": null,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 15,
+            "stayFixed": false
+          }
+        ],
+        "street": [],
+        "notices": [],
+        "unsupported": []
+      },
+      "plan": {
+        "origin": {
+          "name": "Strada Memorandumului 12",
+          "lat": 46.769879599999996,
+          "lng": 23.5869812
+        },
+        "destination": {
+          "name": "The Office",
+          "lat": 46.776267600000004,
+          "lng": 23.6041168
+        },
+        "stops": [
+          {
+            "itemId": "i1",
+            "label": "Coffee",
+            "name": "MUD Specialty Coffee",
+            "lat": 46.77135010000001,
+            "lng": 23.589611500000004,
+            "source": "google",
+            "wishConfirmed": null,
+            "rating": 5,
+            "address": "Strada Regele Ferdinand 3, Cluj-Napoca",
+            "stayMinutes": 15,
+            "arriveMinute": 4
+          }
+        ],
+        "legs": [
+          {
+            "meters": 329,
+            "minutes": 4
+          },
+          {
+            "meters": 1323,
+            "minutes": 16
+          }
+        ],
+        "totals": {
+          "walkMinutes": 20,
+          "stayMinutes": 15,
+          "totalMinutes": 35,
+          "budgetMinutes": 45,
+          "withinBudget": true,
+          "staysShortened": false,
+          "shortestWalkMinutes": 19
+        },
+        "coverage": [],
+        "skipped": [],
+        "notices": []
+      },
+      "scores": {
+        "understanding": {
+          "itemsProduced": 1,
+          "itemsExpected": 1,
+          "itemsMatched": 1,
+          "pairs": [
+            {
+              "produced": 0,
+              "expected": 0,
+              "strength": 2,
+              "what": "coffee shop",
+              "label": "Coffee",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            }
+          ],
+          "fields": {
+            "required": {
+              "correct": 1,
+              "n": 1
+            },
+            "order": {
+              "correct": 1,
+              "n": 1
+            },
+            "count": {
+              "correct": 1,
+              "n": 1
+            },
+            "pace": {
+              "correct": 1,
+              "n": 1
+            },
+            "wish": {
+              "correct": 1,
+              "n": 1
+            }
+          },
+          "kinds": {
+            "fitting": 1,
+            "total": 1
+          },
+          "wishPairs": [
+            {
+              "what": "coffee shop",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            }
+          ],
+          "street": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "streetProperty": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "unsupported": {
+            "expected": false,
+            "produced": false,
+            "correct": true
+          }
+        },
+        "planning": {
+          "requiredUnderstood": 1,
+          "requiredWithStop": 1,
+          "withinBudget": true,
+          "walkOverhead": 1.0526315789473684,
+          "stops": 1,
+          "skipReasons": [],
+          "coverage": []
+        }
+      },
+      "timing": {
+        "understandMs": 2590,
+        "planMs": 46
+      },
+      "error": null
+    },
+    {
+      "id": "dev-03",
+      "request": "Looking for a supermarket before heading home",
+      "notes": "simple: supermarket in Mărăști",
+      "understanding": {
+        "items": [
+          {
+            "id": "i1",
+            "phrase": "Looking for a supermarket before heading home",
+            "label": "Supermarket",
+            "search": [
+              "supermarket"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "shop/supermarket",
+                "name": "Supermarket",
+                "tags": {
+                  "shop": "supermarket"
+                }
+              }
+            ],
+            "googleTypes": [
+              "supermarket"
+            ],
+            "required": true,
+            "order": null,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 15,
+            "stayFixed": false
+          }
+        ],
+        "street": [],
+        "notices": [],
+        "unsupported": []
+      },
+      "plan": {
+        "origin": {
+          "name": "Piața Mărăști",
+          "lat": 46.7785609,
+          "lng": 23.6147475
+        },
+        "destination": {
+          "name": "Str. Fabricii de Zahăr 14",
+          "lat": 46.781386999999995,
+          "lng": 23.6182619
+        },
+        "stops": [
+          {
+            "itemId": "i1",
+            "label": "Supermarket",
+            "name": "Carrefour",
+            "lat": 46.7787005,
+            "lng": 23.6153738,
+            "source": "google",
+            "wishConfirmed": null,
+            "rating": 3.7,
+            "address": "Strada Aurel Vlaicu 1, Cluj-Napoca",
+            "stayMinutes": 15,
+            "arriveMinute": 1
+          }
+        ],
+        "legs": [
+          {
+            "meters": 90,
+            "minutes": 1
+          },
+          {
+            "meters": 598,
+            "minutes": 7
+          }
+        ],
+        "totals": {
+          "walkMinutes": 8,
+          "stayMinutes": 15,
+          "totalMinutes": 23,
+          "budgetMinutes": 40,
+          "withinBudget": true,
+          "staysShortened": false,
+          "shortestWalkMinutes": 8
+        },
+        "coverage": [],
+        "skipped": [],
+        "notices": []
+      },
+      "scores": {
+        "understanding": {
+          "itemsProduced": 1,
+          "itemsExpected": 1,
+          "itemsMatched": 1,
+          "pairs": [
+            {
+              "produced": 0,
+              "expected": 0,
+              "strength": 2,
+              "what": "supermarket",
+              "label": "Supermarket",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            }
+          ],
+          "fields": {
+            "required": {
+              "correct": 1,
+              "n": 1
+            },
+            "order": {
+              "correct": 1,
+              "n": 1
+            },
+            "count": {
+              "correct": 1,
+              "n": 1
+            },
+            "pace": {
+              "correct": 1,
+              "n": 1
+            },
+            "wish": {
+              "correct": 1,
+              "n": 1
+            }
+          },
+          "kinds": {
+            "fitting": 1,
+            "total": 1
+          },
+          "wishPairs": [
+            {
+              "what": "supermarket",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            }
+          ],
+          "street": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "streetProperty": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "unsupported": {
+            "expected": false,
+            "produced": false,
+            "correct": true
+          }
+        },
+        "planning": {
+          "requiredUnderstood": 1,
+          "requiredWithStop": 1,
+          "withinBudget": true,
+          "walkOverhead": 1,
+          "stops": 1,
+          "skipReasons": [],
+          "coverage": []
+        }
+      },
+      "timing": {
+        "understandMs": 2060,
+        "planMs": 44
+      },
+      "error": null
+    },
+    {
+      "id": "dev-04",
+      "request": "Is there a post office along my route?",
+      "notes": "simple: post office, no time limit",
+      "understanding": {
+        "items": [
+          {
+            "id": "i1",
+            "phrase": "Is there a post office along my route?",
+            "label": "Post Office",
+            "search": [
+              "post office"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "amenity/post_office",
+                "name": "Post Office",
+                "tags": {
+                  "amenity": "post_office"
+                }
+              }
+            ],
+            "googleTypes": [
+              "post_office"
+            ],
+            "required": true,
+            "order": null,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 15,
+            "stayFixed": false
+          }
+        ],
+        "street": [],
+        "notices": [],
+        "unsupported": []
+      },
+      "plan": {
+        "origin": {
+          "name": "Parcul Central",
+          "lat": 46.7691448,
+          "lng": 23.5774005
+        },
+        "destination": {
+          "name": "Piața Timotei Cipariu",
+          "lat": 46.7675172,
+          "lng": 23.6003262
+        },
+        "stops": [
+          {
+            "itemId": "i1",
+            "label": "Post Office",
+            "name": "Oficiul Poștal nr. 1 - Ghișeul Exterior 4",
+            "lat": 46.767442,
+            "lng": 23.585624,
+            "source": "osm",
+            "wishConfirmed": null,
+            "rating": null,
+            "address": null,
+            "stayMinutes": 15,
+            "arriveMinute": 10
+          }
+        ],
+        "legs": [
+          {
+            "meters": 872,
+            "minutes": 10
+          },
+          {
+            "meters": 1280,
+            "minutes": 15
+          }
+        ],
+        "totals": {
+          "walkMinutes": 26,
+          "stayMinutes": 15,
+          "totalMinutes": 41,
+          "budgetMinutes": null,
+          "withinBudget": true,
+          "staysShortened": false,
+          "shortestWalkMinutes": 25
+        },
+        "coverage": [],
+        "skipped": [],
+        "notices": []
+      },
+      "scores": {
+        "understanding": {
+          "itemsProduced": 1,
+          "itemsExpected": 1,
+          "itemsMatched": 1,
+          "pairs": [
+            {
+              "produced": 0,
+              "expected": 0,
+              "strength": 2,
+              "what": "post office",
+              "label": "Post Office",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            }
+          ],
+          "fields": {
+            "required": {
+              "correct": 1,
+              "n": 1
+            },
+            "order": {
+              "correct": 1,
+              "n": 1
+            },
+            "count": {
+              "correct": 1,
+              "n": 1
+            },
+            "pace": {
+              "correct": 1,
+              "n": 1
+            },
+            "wish": {
+              "correct": 1,
+              "n": 1
+            }
+          },
+          "kinds": {
+            "fitting": 1,
+            "total": 1
+          },
+          "wishPairs": [
+            {
+              "what": "post office",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            }
+          ],
+          "street": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "streetProperty": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "unsupported": {
+            "expected": false,
+            "produced": false,
+            "correct": true
+          }
+        },
+        "planning": {
+          "requiredUnderstood": 1,
+          "requiredWithStop": 1,
+          "withinBudget": null,
+          "walkOverhead": 1.04,
+          "stops": 1,
+          "skipReasons": [],
+          "coverage": []
+        }
+      },
+      "timing": {
+        "understandMs": 2902,
+        "planMs": 41
+      },
+      "error": null
+    },
+    {
+      "id": "dev-05",
+      "request": "Walk me past a florist",
+      "notes": "simple: florist, tight budget",
+      "understanding": {
+        "items": [
+          {
+            "id": "i1",
+            "phrase": "a florist",
+            "label": "Florist",
+            "search": [
+              "florist"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "shop/florist",
+                "name": "Florist",
+                "tags": {
+                  "shop": "florist"
+                }
+              }
+            ],
+            "googleTypes": [
+              "florist"
+            ],
+            "required": true,
+            "order": null,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 5,
+            "stayFixed": false
+          }
+        ],
+        "street": [],
+        "notices": [],
+        "unsupported": []
+      },
+      "plan": {
+        "origin": {
+          "name": "Str. Clinicilor 3",
+          "lat": 46.7658401,
+          "lng": 23.583215499999998
+        },
+        "destination": {
+          "name": "Piața Lucian Blaga",
+          "lat": 46.7672237,
+          "lng": 23.585979
+        },
+        "stops": [
+          {
+            "itemId": "i1",
+            "label": "Florist",
+            "name": "Piata De Flori",
+            "lat": 46.7665521,
+            "lng": 23.5856392,
+            "source": "google",
+            "wishConfirmed": null,
+            "rating": 5,
+            "address": "Strada Victor Babeș 1, Cluj-Napoca",
+            "stayMinutes": 5,
+            "arriveMinute": 3
+          }
+        ],
+        "legs": [
+          {
+            "meters": 239,
+            "minutes": 3
+          },
+          {
+            "meters": 116,
+            "minutes": 1
+          }
+        ],
+        "totals": {
+          "walkMinutes": 4,
+          "stayMinutes": 5,
+          "totalMinutes": 9,
+          "budgetMinutes": 25,
+          "withinBudget": true,
+          "staysShortened": false,
+          "shortestWalkMinutes": 3
+        },
+        "coverage": [],
+        "skipped": [],
+        "notices": []
+      },
+      "scores": {
+        "understanding": {
+          "itemsProduced": 1,
+          "itemsExpected": 1,
+          "itemsMatched": 1,
+          "pairs": [
+            {
+              "produced": 0,
+              "expected": 0,
+              "strength": 2,
+              "what": "florist",
+              "label": "Florist",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            }
+          ],
+          "fields": {
+            "required": {
+              "correct": 1,
+              "n": 1
+            },
+            "order": {
+              "correct": 1,
+              "n": 1
+            },
+            "count": {
+              "correct": 1,
+              "n": 1
+            },
+            "pace": {
+              "correct": 1,
+              "n": 1
+            },
+            "wish": {
+              "correct": 1,
+              "n": 1
+            }
+          },
+          "kinds": {
+            "fitting": 1,
+            "total": 1
+          },
+          "wishPairs": [
+            {
+              "what": "florist",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            }
+          ],
+          "street": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "streetProperty": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "unsupported": {
+            "expected": false,
+            "produced": false,
+            "correct": true
+          }
+        },
+        "planning": {
+          "requiredUnderstood": 1,
+          "requiredWithStop": 1,
+          "withinBudget": true,
+          "walkOverhead": 1.3333333333333333,
+          "stops": 1,
+          "skipReasons": [],
+          "coverage": []
+        }
+      },
+      "timing": {
+        "understandMs": 1252,
+        "planMs": 36
+      },
+      "error": null
+    },
+    {
+      "id": "dev-06",
+      "request": "I need to visit a bakery, a bank, and a hardware store on my walk",
+      "notes": "several places unordered in Mănăștur",
+      "understanding": {
+        "items": [
+          {
+            "id": "i1",
+            "phrase": "a bakery",
+            "label": "Bakery",
+            "search": [
+              "bakery"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "shop/bakery",
+                "name": "Bakery",
+                "tags": {
+                  "shop": "bakery"
+                }
+              }
+            ],
+            "googleTypes": [
+              "bakery"
+            ],
+            "required": true,
+            "order": null,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 15,
+            "stayFixed": false
+          },
+          {
+            "id": "i2",
+            "phrase": "a bank",
+            "label": "Bank",
+            "search": [
+              "bank"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "amenity/bank",
+                "name": "Bank",
+                "tags": {
+                  "amenity": "bank"
+                }
+              }
+            ],
+            "googleTypes": [
+              "bank"
+            ],
+            "required": true,
+            "order": null,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 15,
+            "stayFixed": false
+          },
+          {
+            "id": "i3",
+            "phrase": "a hardware store",
+            "label": "Hardware Store",
+            "search": [
+              "hardware store"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "shop/hardware",
+                "name": "Hardware Store",
+                "tags": {
+                  "shop": "hardware"
+                }
+              }
+            ],
+            "googleTypes": [
+              "hardware_store"
+            ],
+            "required": true,
+            "order": null,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 15,
+            "stayFixed": false
+          }
+        ],
+        "street": [],
+        "notices": [],
+        "unsupported": []
+      },
+      "plan": {
+        "origin": {
+          "name": "Market Flora",
+          "lat": 46.757616399999996,
+          "lng": 23.5512719
+        },
+        "destination": {
+          "name": "Bloc E4",
+          "lat": 46.7610119,
+          "lng": 23.5635695
+        },
+        "stops": [
+          {
+            "itemId": "i1",
+            "label": "Bakery",
+            "name": "Delissima",
+            "lat": 46.7586252,
+            "lng": 23.5511603,
+            "source": "osm",
+            "wishConfirmed": null,
+            "rating": null,
+            "address": null,
+            "stayMinutes": 15,
+            "arriveMinute": 2
+          },
+          {
+            "itemId": "i2",
+            "label": "Bank",
+            "name": "Banca Transilvania",
+            "lat": 46.7585699,
+            "lng": 23.5509943,
+            "source": "osm",
+            "wishConfirmed": null,
+            "rating": null,
+            "address": null,
+            "stayMinutes": 15,
+            "arriveMinute": 17
+          },
+          {
+            "itemId": "i3",
+            "label": "Hardware Store",
+            "name": "Tanera",
+            "lat": 46.7601843,
+            "lng": 23.5631377,
+            "source": "osm",
+            "wishConfirmed": null,
+            "rating": null,
+            "address": null,
+            "stayMinutes": 15,
+            "arriveMinute": 44
+          }
+        ],
+        "legs": [
+          {
+            "meters": 161,
+            "minutes": 2
+          },
+          {
+            "meters": 20,
+            "minutes": 0
+          },
+          {
+            "meters": 994,
+            "minutes": 12
+          },
+          {
+            "meters": 182,
+            "minutes": 2
+          }
+        ],
+        "totals": {
+          "walkMinutes": 16,
+          "stayMinutes": 45,
+          "totalMinutes": 61,
+          "budgetMinutes": 90,
+          "withinBudget": true,
+          "staysShortened": false,
+          "shortestWalkMinutes": 14
+        },
+        "coverage": [],
+        "skipped": [],
+        "notices": []
+      },
+      "scores": {
+        "understanding": {
+          "itemsProduced": 3,
+          "itemsExpected": 3,
+          "itemsMatched": 3,
+          "pairs": [
+            {
+              "produced": 0,
+              "expected": 0,
+              "strength": 2,
+              "what": "bakery",
+              "label": "Bakery",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            },
+            {
+              "produced": 1,
+              "expected": 1,
+              "strength": 2,
+              "what": "bank",
+              "label": "Bank",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            },
+            {
+              "produced": 2,
+              "expected": 2,
+              "strength": 2,
+              "what": "hardware store",
+              "label": "Hardware Store",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            }
+          ],
+          "fields": {
+            "required": {
+              "correct": 3,
+              "n": 3
+            },
+            "order": {
+              "correct": 3,
+              "n": 3
+            },
+            "count": {
+              "correct": 3,
+              "n": 3
+            },
+            "pace": {
+              "correct": 3,
+              "n": 3
+            },
+            "wish": {
+              "correct": 3,
+              "n": 3
+            }
+          },
+          "kinds": {
+            "fitting": 3,
+            "total": 3
+          },
+          "wishPairs": [
+            {
+              "what": "bakery",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            },
+            {
+              "what": "bank",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            },
+            {
+              "what": "hardware store",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            }
+          ],
+          "street": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "streetProperty": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "unsupported": {
+            "expected": false,
+            "produced": false,
+            "correct": true
+          }
+        },
+        "planning": {
+          "requiredUnderstood": 3,
+          "requiredWithStop": 3,
+          "withinBudget": true,
+          "walkOverhead": 1.1428571428571428,
+          "stops": 3,
+          "skipReasons": [],
+          "coverage": []
+        }
+      },
+      "timing": {
+        "understandMs": 3210,
+        "planMs": 457
+      },
+      "error": null
+    },
+    {
+      "id": "dev-07",
+      "request": "Take me by a bookshop and a souvenir shop while walking around the centre",
+      "notes": "loop in city centre, two unordered shops",
+      "understanding": {
+        "items": [
+          {
+            "id": "i1",
+            "phrase": "a bookshop",
+            "label": "Bookshop",
+            "search": [
+              "bookshop"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "shop/books",
+                "name": "Bookstore",
+                "tags": {
+                  "shop": "books"
+                }
+              }
+            ],
+            "googleTypes": [
+              "book_store"
+            ],
+            "required": true,
+            "order": null,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 15,
+            "stayFixed": false
+          },
+          {
+            "id": "i2",
+            "phrase": "a souvenir shop",
+            "label": "Souvenir Shop",
+            "search": [
+              "souvenir shop"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "shop/gift",
+                "name": "Gift Shop",
+                "tags": {
+                  "shop": "gift"
+                }
+              }
+            ],
+            "googleTypes": [
+              "gift_shop"
+            ],
+            "required": true,
+            "order": null,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 15,
+            "stayFixed": false
+          }
+        ],
+        "street": [],
+        "notices": [],
+        "unsupported": []
+      },
+      "plan": {
+        "origin": {
+          "name": "Piața Muzeului",
+          "lat": 46.7716483,
+          "lng": 23.5872505
+        },
+        "destination": {
+          "name": "Piața Muzeului",
+          "lat": 46.7716483,
+          "lng": 23.5872505
+        },
+        "stops": [
+          {
+            "itemId": "i1",
+            "label": "Bookshop",
+            "name": "Cărturești Library",
+            "lat": 46.772044,
+            "lng": 23.5892691,
+            "source": "google",
+            "wishConfirmed": null,
+            "rating": 4.7,
+            "address": "Strada Émile Zola 1, Cluj-Napoca",
+            "stayMinutes": 15,
+            "arriveMinute": 2
+          },
+          {
+            "itemId": "i2",
+            "label": "Souvenir Shop",
+            "name": "Art Deco Gift & Souvenirs",
+            "lat": 46.7718052,
+            "lng": 23.587557999999998,
+            "source": "google",
+            "wishConfirmed": null,
+            "rating": 4.2,
+            "address": "Piața Muzeului 6, Cluj-Napoca",
+            "stayMinutes": 15,
+            "arriveMinute": 19
+          }
+        ],
+        "legs": [
+          {
+            "meters": 172,
+            "minutes": 2
+          },
+          {
+            "meters": 140,
+            "minutes": 2
+          },
+          {
+            "meters": 55,
+            "minutes": 1
+          }
+        ],
+        "totals": {
+          "walkMinutes": 4,
+          "stayMinutes": 30,
+          "totalMinutes": 34,
+          "budgetMinutes": 75,
+          "withinBudget": true,
+          "staysShortened": false,
+          "shortestWalkMinutes": 0
+        },
+        "coverage": [],
+        "skipped": [],
+        "notices": []
+      },
+      "scores": {
+        "understanding": {
+          "itemsProduced": 2,
+          "itemsExpected": 2,
+          "itemsMatched": 2,
+          "pairs": [
+            {
+              "produced": 0,
+              "expected": 0,
+              "strength": 2,
+              "what": "bookshop",
+              "label": "Bookshop",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            },
+            {
+              "produced": 1,
+              "expected": 1,
+              "strength": 2,
+              "what": "souvenir shop",
+              "label": "Souvenir Shop",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            }
+          ],
+          "fields": {
+            "required": {
+              "correct": 2,
+              "n": 2
+            },
+            "order": {
+              "correct": 2,
+              "n": 2
+            },
+            "count": {
+              "correct": 2,
+              "n": 2
+            },
+            "pace": {
+              "correct": 2,
+              "n": 2
+            },
+            "wish": {
+              "correct": 2,
+              "n": 2
+            }
+          },
+          "kinds": {
+            "fitting": 2,
+            "total": 2
+          },
+          "wishPairs": [
+            {
+              "what": "bookshop",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            },
+            {
+              "what": "souvenir shop",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            }
+          ],
+          "street": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "streetProperty": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "unsupported": {
+            "expected": false,
+            "produced": false,
+            "correct": true
+          }
+        },
+        "planning": {
+          "requiredUnderstood": 2,
+          "requiredWithStop": 2,
+          "withinBudget": true,
+          "walkOverhead": null,
+          "stops": 2,
+          "skipReasons": [],
+          "coverage": []
+        }
+      },
+      "timing": {
+        "understandMs": 3293,
+        "planMs": 239
+      },
+      "error": null
+    },
+    {
+      "id": "dev-08",
+      "request": "We want to see a monument and a botanical garden",
+      "notes": "Sunday sightseeing, generous budget",
+      "understanding": {
+        "items": [
+          {
+            "id": "i1",
+            "phrase": "see a monument",
+            "label": "Monument",
+            "search": [
+              "monument"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "historic/monument",
+                "name": "Monument",
+                "tags": {
+                  "historic": "monument"
+                }
+              }
+            ],
+            "googleTypes": [
+              "monument"
+            ],
+            "required": true,
+            "order": null,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 5,
+            "stayFixed": false
+          },
+          {
+            "id": "i2",
+            "phrase": "see a botanical garden",
+            "label": "Botanical Garden",
+            "search": [
+              "botanical garden"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "leisure/garden/botanical",
+                "name": "Botanical Garden",
+                "tags": {
+                  "leisure": "garden",
+                  "garden:type": "botanical"
+                }
+              }
+            ],
+            "googleTypes": [
+              "botanical_garden"
+            ],
+            "required": true,
+            "order": null,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 60,
+            "stayFixed": false
+          }
+        ],
+        "street": [],
+        "notices": [],
+        "unsupported": []
+      },
+      "plan": {
+        "origin": {
+          "name": "Strada Avram Iancu",
+          "lat": 46.7667097,
+          "lng": 23.5931729
+        },
+        "destination": {
+          "name": "Str. Republicii 42",
+          "lat": 46.762642799999995,
+          "lng": 23.5885911
+        },
+        "stops": [
+          {
+            "itemId": "i1",
+            "label": "Monument",
+            "name": "Școala Ardeleană",
+            "lat": 46.7676195,
+            "lng": 23.5921289,
+            "source": "osm",
+            "wishConfirmed": null,
+            "rating": null,
+            "address": null,
+            "stayMinutes": 5,
+            "arriveMinute": 5
+          },
+          {
+            "itemId": "i2",
+            "label": "Botanical Garden",
+            "name": "Alexandru Borza Botanical Garden",
+            "lat": 46.7624851,
+            "lng": 23.5884695,
+            "source": "google",
+            "wishConfirmed": null,
+            "rating": 4.6,
+            "address": "Str. Republicii 42, Cluj-Napoca",
+            "stayMinutes": 60,
+            "arriveMinute": 20
+          }
+        ],
+        "legs": [
+          {
+            "meters": 393,
+            "minutes": 5
+          },
+          {
+            "meters": 898,
+            "minutes": 11
+          },
+          {
+            "meters": 28,
+            "minutes": 0
+          }
+        ],
+        "totals": {
+          "walkMinutes": 16,
+          "stayMinutes": 65,
+          "totalMinutes": 81,
+          "budgetMinutes": 150,
+          "withinBudget": true,
+          "staysShortened": false,
+          "shortestWalkMinutes": 11
+        },
+        "coverage": [],
+        "skipped": [],
+        "notices": []
+      },
+      "scores": {
+        "understanding": {
+          "itemsProduced": 2,
+          "itemsExpected": 2,
+          "itemsMatched": 2,
+          "pairs": [
+            {
+              "produced": 0,
+              "expected": 0,
+              "strength": 2,
+              "what": "monument",
+              "label": "Monument",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            },
+            {
+              "produced": 1,
+              "expected": 1,
+              "strength": 1,
+              "what": "botanical garden",
+              "label": "Botanical Garden",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": false
+              }
+            }
+          ],
+          "fields": {
+            "required": {
+              "correct": 2,
+              "n": 2
+            },
+            "order": {
+              "correct": 2,
+              "n": 2
+            },
+            "count": {
+              "correct": 2,
+              "n": 2
+            },
+            "pace": {
+              "correct": 2,
+              "n": 2
+            },
+            "wish": {
+              "correct": 1,
+              "n": 2
+            }
+          },
+          "kinds": {
+            "fitting": 2,
+            "total": 2
+          },
+          "wishPairs": [
+            {
+              "what": "monument",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            },
+            {
+              "what": "botanical garden",
+              "expected": "botanical",
+              "produced": "",
+              "correct": false
+            }
+          ],
+          "street": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "streetProperty": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "unsupported": {
+            "expected": false,
+            "produced": false,
+            "correct": true
+          }
+        },
+        "planning": {
+          "requiredUnderstood": 2,
+          "requiredWithStop": 2,
+          "withinBudget": true,
+          "walkOverhead": 1.4545454545454546,
+          "stops": 2,
+          "skipReasons": [],
+          "coverage": []
+        }
+      },
+      "timing": {
+        "understandMs": 1597,
+        "planMs": 269
+      },
+      "error": null
+    },
+    {
+      "id": "dev-09",
+      "request": "I have to drop off dry cleaning and pick up pet food",
+      "notes": "errands in Gheorgheni",
+      "understanding": {
+        "items": [
+          {
+            "id": "i1",
+            "phrase": "drop off dry cleaning",
+            "label": "Dry Cleaning",
+            "search": [
+              "dry cleaner"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "shop/dry_cleaning",
+                "name": "Dry Cleaner",
+                "tags": {
+                  "shop": "dry_cleaning"
+                }
+              }
+            ],
+            "googleTypes": [],
+            "required": true,
+            "order": 1,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 15,
+            "stayFixed": false
+          },
+          {
+            "id": "i2",
+            "phrase": "pick up pet food",
+            "label": "Pet Food",
+            "search": [
+              "pet store"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "shop/pet",
+                "name": "Pet Store",
+                "tags": {
+                  "shop": "pet"
+                }
+              }
+            ],
+            "googleTypes": [
+              "pet_store"
+            ],
+            "required": true,
+            "order": 2,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 15,
+            "stayFixed": false
+          }
+        ],
+        "street": [],
+        "notices": [],
+        "unsupported": []
+      },
+      "plan": {
+        "origin": {
+          "name": "Strada Constantin Brâncuși 55",
+          "lat": 46.765518,
+          "lng": 23.605441799999998
+        },
+        "destination": {
+          "name": "Piața Agroalimentară Hermes",
+          "lat": 46.763542199999996,
+          "lng": 23.6149292
+        },
+        "stops": [
+          {
+            "itemId": "i1",
+            "label": "Dry Cleaning",
+            "name": "Perla",
+            "lat": 46.7625618,
+            "lng": 23.6044713,
+            "source": "osm",
+            "wishConfirmed": null,
+            "rating": null,
+            "address": null,
+            "stayMinutes": 15,
+            "arriveMinute": 8
+          },
+          {
+            "itemId": "i2",
+            "label": "Pet Food",
+            "name": "Pet Shop",
+            "lat": 46.7638134,
+            "lng": 23.602455,
+            "source": "both",
+            "wishConfirmed": null,
+            "rating": 4.7,
+            "address": "Strada Brașov 28, Cluj-Napoca",
+            "stayMinutes": 15,
+            "arriveMinute": 26
+          }
+        ],
+        "legs": [
+          {
+            "meters": 628,
+            "minutes": 8
+          },
+          {
+            "meters": 283,
+            "minutes": 3
+          },
+          {
+            "meters": 1311,
+            "minutes": 16
+          }
+        ],
+        "totals": {
+          "walkMinutes": 27,
+          "stayMinutes": 30,
+          "totalMinutes": 57,
+          "budgetMinutes": 60,
+          "withinBudget": true,
+          "staysShortened": false,
+          "shortestWalkMinutes": 11
+        },
+        "coverage": [],
+        "skipped": [],
+        "notices": []
+      },
+      "scores": {
+        "understanding": {
+          "itemsProduced": 2,
+          "itemsExpected": 2,
+          "itemsMatched": 2,
+          "pairs": [
+            {
+              "produced": 0,
+              "expected": 0,
+              "strength": 2,
+              "what": "dry cleaning",
+              "label": "Dry Cleaning",
+              "fields": {
+                "required": true,
+                "order": false,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            },
+            {
+              "produced": 1,
+              "expected": 1,
+              "strength": 2,
+              "what": "pet shop",
+              "label": "Pet Food",
+              "fields": {
+                "required": true,
+                "order": false,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            }
+          ],
+          "fields": {
+            "required": {
+              "correct": 2,
+              "n": 2
+            },
+            "order": {
+              "correct": 0,
+              "n": 2
+            },
+            "count": {
+              "correct": 2,
+              "n": 2
+            },
+            "pace": {
+              "correct": 2,
+              "n": 2
+            },
+            "wish": {
+              "correct": 2,
+              "n": 2
+            }
+          },
+          "kinds": {
+            "fitting": 2,
+            "total": 2
+          },
+          "wishPairs": [
+            {
+              "what": "dry cleaning",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            },
+            {
+              "what": "pet shop",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            }
+          ],
+          "street": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "streetProperty": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "unsupported": {
+            "expected": false,
+            "produced": false,
+            "correct": true
+          }
+        },
+        "planning": {
+          "requiredUnderstood": 2,
+          "requiredWithStop": 2,
+          "withinBudget": true,
+          "walkOverhead": 2.4545454545454546,
+          "stops": 2,
+          "skipReasons": [],
+          "coverage": []
+        }
+      },
+      "timing": {
+        "understandMs": 1662,
+        "planMs": 121
+      },
+      "error": null
+    },
+    {
+      "id": "dev-10",
+      "request": "First I want to visit an art gallery, then have dinner at a restaurant",
+      "notes": "strict sequence: gallery -> restaurant",
+      "understanding": {
+        "items": [
+          {
+            "id": "i1",
+            "phrase": "visit an art gallery",
+            "label": "Art Gallery",
+            "search": [
+              "art gallery"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "tourism/gallery",
+                "name": "Art Gallery",
+                "tags": {
+                  "tourism": "gallery"
+                }
+              }
+            ],
+            "googleTypes": [
+              "art_gallery"
+            ],
+            "required": true,
+            "order": 1,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 60,
+            "stayFixed": false
+          },
+          {
+            "id": "i2",
+            "phrase": "have dinner at a restaurant",
+            "label": "Restaurant",
+            "search": [
+              "restaurant"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "amenity/restaurant",
+                "name": "Restaurant",
+                "tags": {
+                  "amenity": "restaurant"
+                }
+              }
+            ],
+            "googleTypes": [
+              "restaurant"
+            ],
+            "required": true,
+            "order": 2,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 60,
+            "stayFixed": false
+          }
+        ],
+        "street": [],
+        "notices": [],
+        "unsupported": []
+      },
+      "plan": {
+        "origin": {
+          "name": "Str. Napoca 5",
+          "lat": 46.768209000000006,
+          "lng": 23.5891391
+        },
+        "destination": {
+          "name": "Bulevardul Eroilor 18",
+          "lat": 46.769671699999996,
+          "lng": 23.5938227
+        },
+        "stops": [
+          {
+            "itemId": "i1",
+            "label": "Art Gallery",
+            "name": "Street Gallery",
+            "lat": 46.769414,
+            "lng": 23.591627900000002,
+            "source": "google",
+            "wishConfirmed": null,
+            "rating": 4.8,
+            "address": "Monumentul Memorandistilor, E60 11-3, Cluj-Napoca",
+            "stayMinutes": 60,
+            "arriveMinute": 4
+          },
+          {
+            "itemId": "i2",
+            "label": "Restaurant",
+            "name": "Tramvay",
+            "lat": 46.7699081,
+            "lng": 23.5926891,
+            "source": "osm",
+            "wishConfirmed": null,
+            "rating": null,
+            "address": null,
+            "stayMinutes": 60,
+            "arriveMinute": 65
+          }
+        ],
+        "legs": [
+          {
+            "meters": 295,
+            "minutes": 4
+          },
+          {
+            "meters": 145,
+            "minutes": 2
+          },
+          {
+            "meters": 204,
+            "minutes": 2
+          }
+        ],
+        "totals": {
+          "walkMinutes": 8,
+          "stayMinutes": 120,
+          "totalMinutes": 128,
+          "budgetMinutes": 180,
+          "withinBudget": true,
+          "staysShortened": false,
+          "shortestWalkMinutes": 5
+        },
+        "coverage": [],
+        "skipped": [],
+        "notices": []
+      },
+      "scores": {
+        "understanding": {
+          "itemsProduced": 2,
+          "itemsExpected": 2,
+          "itemsMatched": 2,
+          "pairs": [
+            {
+              "produced": 0,
+              "expected": 0,
+              "strength": 2,
+              "what": "art gallery",
+              "label": "Art Gallery",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            },
+            {
+              "produced": 1,
+              "expected": 1,
+              "strength": 2,
+              "what": "restaurant",
+              "label": "Restaurant",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            }
+          ],
+          "fields": {
+            "required": {
+              "correct": 2,
+              "n": 2
+            },
+            "order": {
+              "correct": 2,
+              "n": 2
+            },
+            "count": {
+              "correct": 2,
+              "n": 2
+            },
+            "pace": {
+              "correct": 2,
+              "n": 2
+            },
+            "wish": {
+              "correct": 2,
+              "n": 2
+            }
+          },
+          "kinds": {
+            "fitting": 2,
+            "total": 2
+          },
+          "wishPairs": [
+            {
+              "what": "art gallery",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            },
+            {
+              "what": "restaurant",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            }
+          ],
+          "street": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "streetProperty": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "unsupported": {
+            "expected": false,
+            "produced": false,
+            "correct": true
+          }
+        },
+        "planning": {
+          "requiredUnderstood": 2,
+          "requiredWithStop": 2,
+          "withinBudget": true,
+          "walkOverhead": 1.6,
+          "stops": 2,
+          "skipReasons": [],
+          "coverage": []
+        }
+      },
+      "timing": {
+        "understandMs": 4077,
+        "planMs": 109
+      },
+      "error": null
+    },
+    {
+      "id": "dev-11",
+      "request": "Start at a playground for my toddler, afterwards stop at an ice cream parlour",
+      "notes": "ordered stops in Grigorescu",
+      "understanding": {
+        "items": [
+          {
+            "id": "i1",
+            "phrase": "Start at a playground for my toddler",
+            "label": "Playground",
+            "search": [
+              "playground"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "leisure/playground",
+                "name": "Playground",
+                "tags": {
+                  "leisure": "playground"
+                }
+              },
+              {
+                "presetId": "leisure/playground/indoor",
+                "name": "Indoor Playground",
+                "tags": {
+                  "leisure": "playground",
+                  "indoor": "yes"
+                }
+              }
+            ],
+            "googleTypes": [
+              "playground",
+              "indoor_playground"
+            ],
+            "required": true,
+            "order": 1,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 30,
+            "stayFixed": false
+          },
+          {
+            "id": "i2",
+            "phrase": "afterwards stop at an ice cream parlour",
+            "label": "Ice Cream",
+            "search": [
+              "ice cream shop"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "amenity/ice_cream",
+                "name": "Ice Cream Shop",
+                "tags": {
+                  "amenity": "ice_cream"
+                }
+              }
+            ],
+            "googleTypes": [
+              "ice_cream_shop"
+            ],
+            "required": true,
+            "order": 2,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 15,
+            "stayFixed": false
+          }
+        ],
+        "street": [],
+        "notices": [],
+        "unsupported": []
+      },
+      "plan": {
+        "origin": {
+          "name": "Parcul Rozelor",
+          "lat": 46.764913799999995,
+          "lng": 23.5526953
+        },
+        "destination": {
+          "name": "Strada Paul Chinezu",
+          "lat": 46.7707026,
+          "lng": 23.5858864
+        },
+        "stops": [
+          {
+            "itemId": "i1",
+            "label": "Playground",
+            "name": "Playground",
+            "lat": 46.7694556,
+            "lng": 23.5807546,
+            "source": "osm",
+            "wishConfirmed": null,
+            "rating": null,
+            "address": null,
+            "stayMinutes": 30,
+            "arriveMinute": 30
+          },
+          {
+            "itemId": "i2",
+            "label": "Ice Cream",
+            "name": "Vice Cream Cluj",
+            "lat": 46.769607,
+            "lng": 23.585148,
+            "source": "google",
+            "wishConfirmed": null,
+            "rating": 4.8,
+            "address": "Strada Emil Isac 5, Cluj-Napoca",
+            "stayMinutes": 15,
+            "arriveMinute": 65
+          }
+        ],
+        "legs": [
+          {
+            "meters": 2536,
+            "minutes": 30
+          },
+          {
+            "meters": 383,
+            "minutes": 5
+          },
+          {
+            "meters": 198,
+            "minutes": 2
+          }
+        ],
+        "totals": {
+          "walkMinutes": 37,
+          "stayMinutes": 45,
+          "totalMinutes": 82,
+          "budgetMinutes": 120,
+          "withinBudget": true,
+          "staysShortened": false,
+          "shortestWalkMinutes": 36
+        },
+        "coverage": [],
+        "skipped": [],
+        "notices": []
+      },
+      "scores": {
+        "understanding": {
+          "itemsProduced": 2,
+          "itemsExpected": 2,
+          "itemsMatched": 2,
+          "pairs": [
+            {
+              "produced": 0,
+              "expected": 0,
+              "strength": 2,
+              "what": "playground",
+              "label": "Playground",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            },
+            {
+              "produced": 1,
+              "expected": 1,
+              "strength": 2,
+              "what": "ice cream parlour",
+              "label": "Ice Cream",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            }
+          ],
+          "fields": {
+            "required": {
+              "correct": 2,
+              "n": 2
+            },
+            "order": {
+              "correct": 2,
+              "n": 2
+            },
+            "count": {
+              "correct": 2,
+              "n": 2
+            },
+            "pace": {
+              "correct": 2,
+              "n": 2
+            },
+            "wish": {
+              "correct": 2,
+              "n": 2
+            }
+          },
+          "kinds": {
+            "fitting": 3,
+            "total": 3
+          },
+          "wishPairs": [
+            {
+              "what": "playground",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            },
+            {
+              "what": "ice cream parlour",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            }
+          ],
+          "street": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "streetProperty": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "unsupported": {
+            "expected": false,
+            "produced": false,
+            "correct": true
+          }
+        },
+        "planning": {
+          "requiredUnderstood": 2,
+          "requiredWithStop": 2,
+          "withinBudget": true,
+          "walkOverhead": 1.0277777777777777,
+          "stops": 2,
+          "skipReasons": [],
+          "coverage": []
+        }
+      },
+      "timing": {
+        "understandMs": 3666,
+        "planMs": 313
+      },
+      "error": null
+    },
+    {
+      "id": "dev-12",
+      "request": "Get a haircut first, then buy groceries, and finally stop by a pub",
+      "notes": "three-step sequence in Zorilor",
+      "understanding": {
+        "items": [
+          {
+            "id": "i1",
+            "phrase": "Get a haircut",
+            "label": "Haircut",
+            "search": [
+              "hairdresser",
+              "barbershop"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "shop/hairdresser",
+                "name": "Hairdresser",
+                "tags": {
+                  "shop": "hairdresser"
+                }
+              },
+              {
+                "presetId": "shop/hairdresser/barber",
+                "name": "Barber",
+                "tags": {
+                  "shop": "hairdresser",
+                  "hairdresser": "barber"
+                }
+              }
+            ],
+            "googleTypes": [
+              "barber_shop",
+              "hair_salon"
+            ],
+            "required": true,
+            "order": 1,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 30,
+            "stayFixed": false
+          },
+          {
+            "id": "i2",
+            "phrase": "Buy groceries",
+            "label": "Groceries",
+            "search": [
+              "supermarket",
+              "grocery store"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "shop/supermarket",
+                "name": "Supermarket",
+                "tags": {
+                  "shop": "supermarket"
+                }
+              },
+              {
+                "presetId": "shop/greengrocer",
+                "name": "Greengrocer",
+                "tags": {
+                  "shop": "greengrocer"
+                }
+              },
+              {
+                "presetId": "shop/supermarket/organic",
+                "name": "Organic Supermarket",
+                "tags": {
+                  "shop": "supermarket",
+                  "organic": "only"
+                }
+              }
+            ],
+            "googleTypes": [
+              "supermarket",
+              "grocery_store"
+            ],
+            "required": true,
+            "order": 2,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 15,
+            "stayFixed": false
+          },
+          {
+            "id": "i3",
+            "phrase": "Stop by a pub",
+            "label": "Pub",
+            "search": [
+              "pub",
+              "bar"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "amenity/bar",
+                "name": "Bar",
+                "tags": {
+                  "amenity": "bar"
+                }
+              },
+              {
+                "presetId": "amenity/pub",
+                "name": "Pub",
+                "tags": {
+                  "amenity": "pub"
+                }
+              }
+            ],
+            "googleTypes": [
+              "pub",
+              "bar"
+            ],
+            "required": true,
+            "order": 3,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 30,
+            "stayFixed": false
+          }
+        ],
+        "street": [],
+        "notices": [],
+        "unsupported": []
+      },
+      "plan": {
+        "origin": {
+          "name": "Strada Observatorului 82",
+          "lat": 46.7548761,
+          "lng": 23.585047499999998
+        },
+        "destination": {
+          "name": "Zorilor Farmers Market",
+          "lat": 46.754678899999995,
+          "lng": 23.5781873
+        },
+        "stops": [
+          {
+            "itemId": "i1",
+            "label": "Haircut",
+            "name": "Coafor",
+            "lat": 46.7576178,
+            "lng": 23.578932,
+            "source": "osm",
+            "wishConfirmed": null,
+            "rating": null,
+            "address": null,
+            "stayMinutes": 30,
+            "arriveMinute": 9
+          },
+          {
+            "itemId": "i2",
+            "label": "Groceries",
+            "name": "Mega Image",
+            "lat": 46.7552686,
+            "lng": 23.5793214,
+            "source": "osm",
+            "wishConfirmed": null,
+            "rating": null,
+            "address": null,
+            "stayMinutes": 15,
+            "arriveMinute": 43
+          },
+          {
+            "itemId": "i3",
+            "label": "Pub",
+            "name": "Bar",
+            "lat": 46.7554183,
+            "lng": 23.5774695,
+            "source": "osm",
+            "wishConfirmed": null,
+            "rating": null,
+            "address": null,
+            "stayMinutes": 30,
+            "arriveMinute": 60
+          }
+        ],
+        "legs": [
+          {
+            "meters": 723,
+            "minutes": 9
+          },
+          {
+            "meters": 374,
+            "minutes": 4
+          },
+          {
+            "meters": 172,
+            "minutes": 2
+          },
+          {
+            "meters": 167,
+            "minutes": 2
+          }
+        ],
+        "totals": {
+          "walkMinutes": 17,
+          "stayMinutes": 75,
+          "totalMinutes": 92,
+          "budgetMinutes": 160,
+          "withinBudget": true,
+          "staysShortened": false,
+          "shortestWalkMinutes": 10
+        },
+        "coverage": [],
+        "skipped": [],
+        "notices": []
+      },
+      "scores": {
+        "understanding": {
+          "itemsProduced": 3,
+          "itemsExpected": 3,
+          "itemsMatched": 3,
+          "pairs": [
+            {
+              "produced": 0,
+              "expected": 0,
+              "strength": 2,
+              "what": "hairdresser",
+              "label": "Haircut",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            },
+            {
+              "produced": 1,
+              "expected": 1,
+              "strength": 2,
+              "what": "grocery store",
+              "label": "Groceries",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            },
+            {
+              "produced": 2,
+              "expected": 2,
+              "strength": 2,
+              "what": "pub",
+              "label": "Pub",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            }
+          ],
+          "fields": {
+            "required": {
+              "correct": 3,
+              "n": 3
+            },
+            "order": {
+              "correct": 3,
+              "n": 3
+            },
+            "count": {
+              "correct": 3,
+              "n": 3
+            },
+            "pace": {
+              "correct": 3,
+              "n": 3
+            },
+            "wish": {
+              "correct": 3,
+              "n": 3
+            }
+          },
+          "kinds": {
+            "fitting": 6,
+            "total": 7
+          },
+          "wishPairs": [
+            {
+              "what": "hairdresser",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            },
+            {
+              "what": "grocery store",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            },
+            {
+              "what": "pub",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            }
+          ],
+          "street": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "streetProperty": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "unsupported": {
+            "expected": false,
+            "produced": false,
+            "correct": true
+          }
+        },
+        "planning": {
+          "requiredUnderstood": 3,
+          "requiredWithStop": 3,
+          "withinBudget": true,
+          "walkOverhead": 1.7,
+          "stops": 3,
+          "skipReasons": [],
+          "coverage": []
+        }
+      },
+      "timing": {
+        "understandMs": 3405,
+        "planMs": 739
+      },
+      "error": null
+    },
+    {
+      "id": "dev-13",
+      "request": "I need to visit a library, and maybe a bakery if there is one nearby",
+      "notes": "one required, one optional",
+      "understanding": {
+        "items": [
+          {
+            "id": "i1",
+            "phrase": "visit a library",
+            "label": "Library",
+            "search": [
+              "library"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "amenity/library",
+                "name": "Library",
+                "tags": {
+                  "amenity": "library"
+                }
+              }
+            ],
+            "googleTypes": [
+              "library"
+            ],
+            "required": true,
+            "order": null,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 30,
+            "stayFixed": false
+          },
+          {
+            "id": "i2",
+            "phrase": "maybe a bakery if there is one nearby",
+            "label": "Bakery",
+            "search": [
+              "bakery"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "shop/bakery",
+                "name": "Bakery",
+                "tags": {
+                  "shop": "bakery"
+                }
+              }
+            ],
+            "googleTypes": [
+              "bakery"
+            ],
+            "required": false,
+            "order": null,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 15,
+            "stayFixed": false
+          }
+        ],
+        "street": [],
+        "notices": [],
+        "unsupported": []
+      },
+      "plan": {
+        "origin": {
+          "name": "Strada Mihail Kogălniceanu 1",
+          "lat": 46.7708065,
+          "lng": 23.582110699999998
+        },
+        "destination": {
+          "name": "Piața Ștefan cel Mare",
+          "lat": 46.7697405,
+          "lng": 23.5983418
+        },
+        "stops": [
+          {
+            "itemId": "i2",
+            "label": "Bakery",
+            "name": "Patiseria Ardelenească Napoca",
+            "lat": 46.7676793,
+            "lng": 23.5881349,
+            "source": "google",
+            "wishConfirmed": null,
+            "rating": 4.9,
+            "address": "Str. Napoca 17, Cluj-Napoca",
+            "stayMinutes": 15,
+            "arriveMinute": 10
+          },
+          {
+            "itemId": "i1",
+            "label": "Library",
+            "name": "Biblioteca de Istorie modernă",
+            "lat": 46.768028699999995,
+            "lng": 23.588575499999997,
+            "source": "google",
+            "wishConfirmed": null,
+            "rating": 5,
+            "address": "Institutul de Istorie Naţională, Str. Napoca 11, Cluj-Napoca",
+            "stayMinutes": 22,
+            "arriveMinute": 27
+          }
+        ],
+        "legs": [
+          {
+            "meters": 864,
+            "minutes": 10
+          },
+          {
+            "meters": 110,
+            "minutes": 1
+          },
+          {
+            "meters": 910,
+            "minutes": 11
+          }
+        ],
+        "totals": {
+          "walkMinutes": 23,
+          "stayMinutes": 37,
+          "totalMinutes": 60,
+          "budgetMinutes": 60,
+          "withinBudget": true,
+          "staysShortened": true,
+          "shortestWalkMinutes": 19
+        },
+        "coverage": [],
+        "skipped": [],
+        "notices": []
+      },
+      "scores": {
+        "understanding": {
+          "itemsProduced": 2,
+          "itemsExpected": 2,
+          "itemsMatched": 2,
+          "pairs": [
+            {
+              "produced": 0,
+              "expected": 0,
+              "strength": 2,
+              "what": "library",
+              "label": "Library",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            },
+            {
+              "produced": 1,
+              "expected": 1,
+              "strength": 2,
+              "what": "bakery",
+              "label": "Bakery",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            }
+          ],
+          "fields": {
+            "required": {
+              "correct": 2,
+              "n": 2
+            },
+            "order": {
+              "correct": 2,
+              "n": 2
+            },
+            "count": {
+              "correct": 2,
+              "n": 2
+            },
+            "pace": {
+              "correct": 2,
+              "n": 2
+            },
+            "wish": {
+              "correct": 2,
+              "n": 2
+            }
+          },
+          "kinds": {
+            "fitting": 2,
+            "total": 2
+          },
+          "wishPairs": [
+            {
+              "what": "library",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            },
+            {
+              "what": "bakery",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            }
+          ],
+          "street": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "streetProperty": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "unsupported": {
+            "expected": false,
+            "produced": false,
+            "correct": true
+          }
+        },
+        "planning": {
+          "requiredUnderstood": 1,
+          "requiredWithStop": 1,
+          "withinBudget": true,
+          "walkOverhead": 1.2105263157894737,
+          "stops": 2,
+          "skipReasons": [],
+          "coverage": []
+        }
+      },
+      "timing": {
+        "understandMs": 1584,
+        "planMs": 80
+      },
+      "error": null
+    },
+    {
+      "id": "dev-14",
+      "request": "Walk me to the train station; if we pass a newsagent I'd like to buy a magazine",
+      "notes": "destination is station, optional stop on route",
+      "understanding": {
+        "items": [
+          {
+            "id": "i1",
+            "phrase": "if we pass a newsagent I'd like to buy a magazine",
+            "label": "Newsagent",
+            "search": [
+              "newsagent",
+              "kiosk",
+              "bookshop"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "shop/newsagent",
+                "name": "Newsstand",
+                "tags": {
+                  "shop": "newsagent"
+                }
+              },
+              {
+                "presetId": "shop/kiosk",
+                "name": "Kiosk",
+                "tags": {
+                  "shop": "kiosk"
+                }
+              },
+              {
+                "presetId": "shop/books",
+                "name": "Bookstore",
+                "tags": {
+                  "shop": "books"
+                }
+              }
+            ],
+            "googleTypes": [
+              "book_store"
+            ],
+            "required": false,
+            "order": null,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 15,
+            "stayFixed": false
+          }
+        ],
+        "street": [],
+        "notices": [],
+        "unsupported": []
+      },
+      "plan": {
+        "origin": {
+          "name": "Piața Mihai Viteazu",
+          "lat": 46.7745841,
+          "lng": 23.5900622
+        },
+        "destination": {
+          "name": "Piața Gării",
+          "lat": 46.7840051,
+          "lng": 23.5858417
+        },
+        "stops": [
+          {
+            "itemId": "i1",
+            "label": "Newsagent",
+            "name": "Librăria Compas",
+            "lat": 46.7744171,
+            "lng": 23.5903817,
+            "source": "google",
+            "wishConfirmed": null,
+            "rating": 4.8,
+            "address": "Piața Mihai Viteazu 11-13, Cluj-Napoca",
+            "stayMinutes": 15,
+            "arriveMinute": 1
+          }
+        ],
+        "legs": [
+          {
+            "meters": 63,
+            "minutes": 1
+          },
+          {
+            "meters": 1405,
+            "minutes": 17
+          }
+        ],
+        "totals": {
+          "walkMinutes": 18,
+          "stayMinutes": 15,
+          "totalMinutes": 33,
+          "budgetMinutes": 35,
+          "withinBudget": true,
+          "staysShortened": false,
+          "shortestWalkMinutes": 16
+        },
+        "coverage": [],
+        "skipped": [],
+        "notices": []
+      },
+      "scores": {
+        "understanding": {
+          "itemsProduced": 1,
+          "itemsExpected": 1,
+          "itemsMatched": 1,
+          "pairs": [
+            {
+              "produced": 0,
+              "expected": 0,
+              "strength": 2,
+              "what": "newsagent",
+              "label": "Newsagent",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            }
+          ],
+          "fields": {
+            "required": {
+              "correct": 1,
+              "n": 1
+            },
+            "order": {
+              "correct": 1,
+              "n": 1
+            },
+            "count": {
+              "correct": 1,
+              "n": 1
+            },
+            "pace": {
+              "correct": 1,
+              "n": 1
+            },
+            "wish": {
+              "correct": 1,
+              "n": 1
+            }
+          },
+          "kinds": {
+            "fitting": 2,
+            "total": 3
+          },
+          "wishPairs": [
+            {
+              "what": "newsagent",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            }
+          ],
+          "street": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "streetProperty": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "unsupported": {
+            "expected": false,
+            "produced": false,
+            "correct": true
+          }
+        },
+        "planning": {
+          "requiredUnderstood": 0,
+          "requiredWithStop": 0,
+          "withinBudget": true,
+          "walkOverhead": 1.125,
+          "stops": 1,
+          "skipReasons": [],
+          "coverage": []
+        }
+      },
+      "timing": {
+        "understandMs": 3156,
+        "planMs": 410
+      },
+      "error": null
+    },
+    {
+      "id": "dev-15",
+      "request": "Could we pass by a wine shop, and perhaps a cheese shop if it's not out of the way?",
+      "notes": "required wine shop + optional cheese shop",
+      "understanding": {
+        "items": [
+          {
+            "id": "i1",
+            "phrase": "pass by a wine shop",
+            "label": "Wine Shop",
+            "search": [
+              "wine shop"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "shop/wine",
+                "name": "Wine Shop",
+                "tags": {
+                  "shop": "wine"
+                }
+              }
+            ],
+            "googleTypes": [
+              "wine_bar"
+            ],
+            "required": true,
+            "order": null,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 15,
+            "stayFixed": false
+          },
+          {
+            "id": "i2",
+            "phrase": "perhaps a cheese shop if it's not out of the way",
+            "label": "Cheese Shop",
+            "search": [
+              "cheese shop"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "shop/cheese",
+                "name": "Cheese Store",
+                "tags": {
+                  "shop": "cheese"
+                }
+              }
+            ],
+            "googleTypes": [],
+            "required": false,
+            "order": null,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 15,
+            "stayFixed": false
+          }
+        ],
+        "street": [],
+        "notices": [],
+        "unsupported": []
+      },
+      "plan": {
+        "origin": {
+          "name": "Strada Andrei Șaguna",
+          "lat": 46.7736485,
+          "lng": 23.5905951
+        },
+        "destination": {
+          "name": "Strada Horea 20",
+          "lat": 46.7764634,
+          "lng": 23.5873819
+        },
+        "stops": [
+          {
+            "itemId": "i2",
+            "label": "Cheese Shop",
+            "name": "Bonas",
+            "lat": 46.7702155,
+            "lng": 23.5921615,
+            "source": "osm",
+            "wishConfirmed": null,
+            "rating": null,
+            "address": null,
+            "stayMinutes": 14,
+            "arriveMinute": 5
+          },
+          {
+            "itemId": "i1",
+            "label": "Wine Shop",
+            "name": "Bujole",
+            "lat": 46.7695899,
+            "lng": 23.5887934,
+            "source": "google",
+            "wishConfirmed": null,
+            "rating": 4.5,
+            "address": "Casa Schleunig, Piața Unirii 15, Cluj-Napoca",
+            "stayMinutes": 14,
+            "arriveMinute": 25
+          }
+        ],
+        "legs": [
+          {
+            "meters": 457,
+            "minutes": 5
+          },
+          {
+            "meters": 452,
+            "minutes": 5
+          },
+          {
+            "meters": 904,
+            "minutes": 11
+          }
+        ],
+        "totals": {
+          "walkMinutes": 22,
+          "stayMinutes": 28,
+          "totalMinutes": 50,
+          "budgetMinutes": 50,
+          "withinBudget": true,
+          "staysShortened": true,
+          "shortestWalkMinutes": 7
+        },
+        "coverage": [],
+        "skipped": [],
+        "notices": []
+      },
+      "scores": {
+        "understanding": {
+          "itemsProduced": 2,
+          "itemsExpected": 2,
+          "itemsMatched": 2,
+          "pairs": [
+            {
+              "produced": 0,
+              "expected": 0,
+              "strength": 2,
+              "what": "wine shop",
+              "label": "Wine Shop",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            },
+            {
+              "produced": 1,
+              "expected": 1,
+              "strength": 2,
+              "what": "cheese shop",
+              "label": "Cheese Shop",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            }
+          ],
+          "fields": {
+            "required": {
+              "correct": 2,
+              "n": 2
+            },
+            "order": {
+              "correct": 2,
+              "n": 2
+            },
+            "count": {
+              "correct": 2,
+              "n": 2
+            },
+            "pace": {
+              "correct": 2,
+              "n": 2
+            },
+            "wish": {
+              "correct": 2,
+              "n": 2
+            }
+          },
+          "kinds": {
+            "fitting": 2,
+            "total": 2
+          },
+          "wishPairs": [
+            {
+              "what": "wine shop",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            },
+            {
+              "what": "cheese shop",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            }
+          ],
+          "street": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "streetProperty": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "unsupported": {
+            "expected": false,
+            "produced": false,
+            "correct": true
+          }
+        },
+        "planning": {
+          "requiredUnderstood": 1,
+          "requiredWithStop": 1,
+          "withinBudget": true,
+          "walkOverhead": 3.142857142857143,
+          "stops": 2,
+          "skipReasons": [],
+          "coverage": []
+        }
+      },
+      "timing": {
+        "understandMs": 2809,
+        "planMs": 291
+      },
+      "error": null
+    },
+    {
+      "id": "dev-16",
+      "request": "I want to check out two clothing stores before heading to the mall",
+      "notes": "count=2 clothing stores",
+      "understanding": {
+        "items": [
+          {
+            "id": "i1",
+            "phrase": "check out two clothing stores",
+            "label": "Clothing Store",
+            "search": [
+              "clothing store"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "shop/clothes",
+                "name": "Clothing Store",
+                "tags": {
+                  "shop": "clothes"
+                }
+              }
+            ],
+            "googleTypes": [
+              "clothing_store"
+            ],
+            "required": true,
+            "order": null,
+            "count": 2,
+            "pace": "normal",
+            "stayMinutes": 15,
+            "stayFixed": false
+          }
+        ],
+        "street": [],
+        "notices": [],
+        "unsupported": []
+      },
+      "plan": {
+        "origin": {
+          "name": "Piața Unirii",
+          "lat": 46.7694539,
+          "lng": 23.5892214
+        },
+        "destination": {
+          "name": "Iulius Mall",
+          "lat": 46.771833,
+          "lng": 23.6257605
+        },
+        "stops": [
+          {
+            "itemId": "i1",
+            "label": "Clothing Store",
+            "name": "Maria",
+            "lat": 46.7686007,
+            "lng": 23.5892749,
+            "source": "both",
+            "wishConfirmed": null,
+            "rating": 4.8,
+            "address": "Str. Napoca 2, Cluj-Napoca",
+            "stayMinutes": 15,
+            "arriveMinute": 2
+          },
+          {
+            "itemId": "i1",
+            "label": "Clothing Store",
+            "name": "Astrid",
+            "lat": 46.769792,
+            "lng": 23.5937865,
+            "source": "osm",
+            "wishConfirmed": null,
+            "rating": null,
+            "address": null,
+            "stayMinutes": 15,
+            "arriveMinute": 22
+          }
+        ],
+        "legs": [
+          {
+            "meters": 145,
+            "minutes": 2
+          },
+          {
+            "meters": 445,
+            "minutes": 5
+          },
+          {
+            "meters": 2846,
+            "minutes": 34
+          }
+        ],
+        "totals": {
+          "walkMinutes": 41,
+          "stayMinutes": 30,
+          "totalMinutes": 71,
+          "budgetMinutes": 140,
+          "withinBudget": true,
+          "staysShortened": false,
+          "shortestWalkMinutes": 39
+        },
+        "coverage": [],
+        "skipped": [],
+        "notices": []
+      },
+      "scores": {
+        "understanding": {
+          "itemsProduced": 1,
+          "itemsExpected": 1,
+          "itemsMatched": 1,
+          "pairs": [
+            {
+              "produced": 0,
+              "expected": 0,
+              "strength": 2,
+              "what": "clothing store",
+              "label": "Clothing Store",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            }
+          ],
+          "fields": {
+            "required": {
+              "correct": 1,
+              "n": 1
+            },
+            "order": {
+              "correct": 1,
+              "n": 1
+            },
+            "count": {
+              "correct": 1,
+              "n": 1
+            },
+            "pace": {
+              "correct": 1,
+              "n": 1
+            },
+            "wish": {
+              "correct": 1,
+              "n": 1
+            }
+          },
+          "kinds": {
+            "fitting": 1,
+            "total": 1
+          },
+          "wishPairs": [
+            {
+              "what": "clothing store",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            }
+          ],
+          "street": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "streetProperty": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "unsupported": {
+            "expected": false,
+            "produced": false,
+            "correct": true
+          }
+        },
+        "planning": {
+          "requiredUnderstood": 1,
+          "requiredWithStop": 1,
+          "withinBudget": true,
+          "walkOverhead": 1.0512820512820513,
+          "stops": 2,
+          "skipReasons": [],
+          "coverage": []
+        }
+      },
+      "timing": {
+        "understandMs": 1683,
+        "planMs": 119
+      },
+      "error": null
+    },
+    {
+      "id": "dev-17",
+      "request": "Take me past a few viewpoints overlooking the city",
+      "notes": "count from 'a few' (count omitted since ambiguous) on Gruia/Cetățuia",
+      "understanding": {
+        "items": [
+          {
+            "id": "i1",
+            "phrase": "viewpoints overlooking the city",
+            "label": "Viewpoint",
+            "search": [
+              "viewpoint"
+            ],
+            "details": "overlooking the city",
+            "osm": [
+              {
+                "presetId": "tourism/viewpoint",
+                "name": "Viewpoint",
+                "tags": {
+                  "tourism": "viewpoint"
+                }
+              },
+              {
+                "presetId": "man_made/tower/observation",
+                "name": "Observation Tower",
+                "tags": {
+                  "man_made": "tower",
+                  "tower:type": "observation"
+                }
+              }
+            ],
+            "googleTypes": [
+              "observation_deck",
+              "scenic_spot"
+            ],
+            "required": true,
+            "order": null,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 5,
+            "stayFixed": false
+          }
+        ],
+        "street": [],
+        "notices": [],
+        "unsupported": []
+      },
+      "plan": {
+        "origin": {
+          "name": "Strada Emil Racoviță 1",
+          "lat": 46.774750999999995,
+          "lng": 23.5858912
+        },
+        "destination": {
+          "name": "Cetățuia Park",
+          "lat": 46.775334099999995,
+          "lng": 23.5816514
+        },
+        "stops": [
+          {
+            "itemId": "i1",
+            "label": "Viewpoint",
+            "name": "Viewpoint",
+            "lat": 46.7739271,
+            "lng": 23.5838279,
+            "source": "osm",
+            "wishConfirmed": "overlooking the city",
+            "rating": null,
+            "address": null,
+            "stayMinutes": 5,
+            "arriveMinute": 4
+          }
+        ],
+        "legs": [
+          {
+            "meters": 313,
+            "minutes": 4
+          },
+          {
+            "meters": 475,
+            "minutes": 6
+          }
+        ],
+        "totals": {
+          "walkMinutes": 9,
+          "stayMinutes": 5,
+          "totalMinutes": 14,
+          "budgetMinutes": 90,
+          "withinBudget": true,
+          "staysShortened": false,
+          "shortestWalkMinutes": 8
+        },
+        "coverage": [],
+        "skipped": [],
+        "notices": []
+      },
+      "scores": {
+        "understanding": {
+          "itemsProduced": 1,
+          "itemsExpected": 1,
+          "itemsMatched": 1,
+          "pairs": [
+            {
+              "produced": 0,
+              "expected": 0,
+              "strength": 2,
+              "what": "viewpoint",
+              "label": "Viewpoint",
+              "fields": {
+                "required": true,
+                "order": true,
+                "pace": true,
+                "wish": false
+              }
+            }
+          ],
+          "fields": {
+            "required": {
+              "correct": 1,
+              "n": 1
+            },
+            "order": {
+              "correct": 1,
+              "n": 1
+            },
+            "count": {
+              "correct": 0,
+              "n": 0
+            },
+            "pace": {
+              "correct": 1,
+              "n": 1
+            },
+            "wish": {
+              "correct": 0,
+              "n": 1
+            }
+          },
+          "kinds": {
+            "fitting": 1,
+            "total": 2
+          },
+          "wishPairs": [
+            {
+              "what": "viewpoint",
+              "expected": null,
+              "produced": "overlooking the city",
+              "correct": false
+            }
+          ],
+          "street": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "streetProperty": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "unsupported": {
+            "expected": false,
+            "produced": false,
+            "correct": true
+          }
+        },
+        "planning": {
+          "requiredUnderstood": 1,
+          "requiredWithStop": 1,
+          "withinBudget": true,
+          "walkOverhead": 1.125,
+          "stops": 1,
+          "skipReasons": [],
+          "coverage": []
+        }
+      },
+      "timing": {
+        "understandMs": 3605,
+        "planMs": 2042
+      },
+      "error": null
+    },
+    {
+      "id": "dev-18",
+      "request": "I only have time for a quick coffee and a brief stop at a kiosk",
+      "notes": "pace=quick for both items",
+      "understanding": {
+        "items": [
+          {
+            "id": "i1",
+            "phrase": "a quick coffee",
+            "label": "Coffee",
+            "search": [
+              "cafe"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "amenity/cafe",
+                "name": "Cafe",
+                "tags": {
+                  "amenity": "cafe"
+                }
+              }
+            ],
+            "googleTypes": [
+              "cafe"
+            ],
+            "required": true,
+            "order": 1,
+            "count": 1,
+            "pace": "quick",
+            "stayMinutes": 10,
+            "stayFixed": true
+          },
+          {
+            "id": "i2",
+            "phrase": "a brief stop at a kiosk",
+            "label": "Kiosk",
+            "search": [
+              "kiosk"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "shop/kiosk",
+                "name": "Kiosk",
+                "tags": {
+                  "shop": "kiosk"
+                }
+              }
+            ],
+            "googleTypes": [],
+            "required": true,
+            "order": 2,
+            "count": 1,
+            "pace": "quick",
+            "stayMinutes": 5,
+            "stayFixed": true
+          }
+        ],
+        "street": [],
+        "notices": [],
+        "unsupported": []
+      },
+      "plan": {
+        "origin": {
+          "name": "Strada Teodor Mihali 58",
+          "lat": 46.77427360000001,
+          "lng": 23.621042
+        },
+        "destination": {
+          "name": "Faculty of Economics and Business Administration",
+          "lat": 46.7731747,
+          "lng": 23.6213941
+        },
+        "stops": [
+          {
+            "itemId": "i1",
+            "label": "Coffee",
+            "name": "Roots Urban Tastery",
+            "lat": 46.7740173,
+            "lng": 23.6205787,
+            "source": "both",
+            "wishConfirmed": null,
+            "rating": 4.5,
+            "address": "Strada Alexandru Vaida Voevod 16, Cluj-Napoca",
+            "stayMinutes": 10,
+            "arriveMinute": 2
+          }
+        ],
+        "legs": [
+          {
+            "meters": 202,
+            "minutes": 2
+          },
+          {
+            "meters": 271,
+            "minutes": 3
+          }
+        ],
+        "totals": {
+          "walkMinutes": 6,
+          "stayMinutes": 10,
+          "totalMinutes": 16,
+          "budgetMinutes": 25,
+          "withinBudget": true,
+          "staysShortened": false,
+          "shortestWalkMinutes": 3
+        },
+        "coverage": [],
+        "skipped": [
+          {
+            "itemId": "i2",
+            "label": "Kiosk",
+            "reason": "over_budget",
+            "message": "A kiosk does not fit in your time.",
+            "cityCount": 18
+          }
+        ],
+        "notices": []
+      },
+      "scores": {
+        "understanding": {
+          "itemsProduced": 2,
+          "itemsExpected": 2,
+          "itemsMatched": 2,
+          "pairs": [
+            {
+              "produced": 0,
+              "expected": 0,
+              "strength": 2,
+              "what": "coffee",
+              "label": "Coffee",
+              "fields": {
+                "required": true,
+                "order": false,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            },
+            {
+              "produced": 1,
+              "expected": 1,
+              "strength": 2,
+              "what": "kiosk",
+              "label": "Kiosk",
+              "fields": {
+                "required": true,
+                "order": false,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            }
+          ],
+          "fields": {
+            "required": {
+              "correct": 2,
+              "n": 2
+            },
+            "order": {
+              "correct": 0,
+              "n": 2
+            },
+            "count": {
+              "correct": 2,
+              "n": 2
+            },
+            "pace": {
+              "correct": 2,
+              "n": 2
+            },
+            "wish": {
+              "correct": 2,
+              "n": 2
+            }
+          },
+          "kinds": {
+            "fitting": 2,
+            "total": 2
+          },
+          "wishPairs": [
+            {
+              "what": "coffee",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            },
+            {
+              "what": "kiosk",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            }
+          ],
+          "street": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "streetProperty": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "unsupported": {
+            "expected": false,
+            "produced": false,
+            "correct": true
+          }
+        },
+        "planning": {
+          "requiredUnderstood": 2,
+          "requiredWithStop": 1,
+          "withinBudget": true,
+          "walkOverhead": 2,
+          "stops": 1,
+          "skipReasons": [
+            "over_budget"
+          ],
+          "coverage": []
+        }
+      },
+      "timing": {
+        "understandMs": 1531,
+        "planMs": 36
+      },
+      "error": null
+    },
+    {
+      "id": "dev-19",
+      "request": "I want a long unhurried lunch at a bistro, then a quick visit to a pharmacy",
+      "notes": "mixed pace (long + quick) with order",
+      "understanding": {
+        "items": [
+          {
+            "id": "i1",
+            "phrase": "a long unhurried lunch at a bistro",
+            "label": "Bistro",
+            "search": [
+              "bistro"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "amenity/cafe",
+                "name": "Cafe",
+                "tags": {
+                  "amenity": "cafe"
+                }
+              }
+            ],
+            "googleTypes": [
+              "bistro"
+            ],
+            "required": true,
+            "order": 1,
+            "count": 1,
+            "pace": "long",
+            "stayMinutes": 90,
+            "stayFixed": true
+          },
+          {
+            "id": "i2",
+            "phrase": "a quick visit to a pharmacy",
+            "label": "Pharmacy",
+            "search": [
+              "pharmacy"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "amenity/pharmacy",
+                "name": "Pharmacy Counter",
+                "tags": {
+                  "amenity": "pharmacy"
+                }
+              },
+              {
+                "presetId": "shop/chemist",
+                "name": "Drugstore",
+                "tags": {
+                  "shop": "chemist"
+                }
+              }
+            ],
+            "googleTypes": [
+              "pharmacy",
+              "drugstore"
+            ],
+            "required": true,
+            "order": 2,
+            "count": 1,
+            "pace": "quick",
+            "stayMinutes": 5,
+            "stayFixed": true
+          }
+        ],
+        "street": [],
+        "notices": [],
+        "unsupported": []
+      },
+      "plan": {
+        "origin": {
+          "name": "Transfiguration Greek-Catholic Church",
+          "lat": 46.7693437,
+          "lng": 23.5924405
+        },
+        "destination": {
+          "name": "Str. Universității 7",
+          "lat": 46.7672412,
+          "lng": 23.590741
+        },
+        "stops": [
+          {
+            "itemId": "i1",
+            "label": "Bistro",
+            "name": "Olivo Coffee You Go Kiosk",
+            "lat": 46.7695909,
+            "lng": 23.5920444,
+            "source": "osm",
+            "wishConfirmed": null,
+            "rating": null,
+            "address": null,
+            "stayMinutes": 90,
+            "arriveMinute": 1
+          },
+          {
+            "itemId": "i2",
+            "label": "Pharmacy",
+            "name": "Dr. Max Pharmacy",
+            "lat": 46.7695425,
+            "lng": 23.5909077,
+            "source": "both",
+            "wishConfirmed": null,
+            "rating": 4.2,
+            "address": "Bulevardul Eroilor 1, Cluj-Napoca",
+            "stayMinutes": 5,
+            "arriveMinute": 93
+          }
+        ],
+        "legs": [
+          {
+            "meters": 54,
+            "minutes": 1
+          },
+          {
+            "meters": 184,
+            "minutes": 2
+          },
+          {
+            "meters": 343,
+            "minutes": 4
+          }
+        ],
+        "totals": {
+          "walkMinutes": 7,
+          "stayMinutes": 95,
+          "totalMinutes": 102,
+          "budgetMinutes": 150,
+          "withinBudget": true,
+          "staysShortened": false,
+          "shortestWalkMinutes": 5
+        },
+        "coverage": [],
+        "skipped": [],
+        "notices": []
+      },
+      "scores": {
+        "understanding": {
+          "itemsProduced": 2,
+          "itemsExpected": 2,
+          "itemsMatched": 2,
+          "pairs": [
+            {
+              "produced": 0,
+              "expected": 0,
+              "strength": 2,
+              "what": "lunch bistro",
+              "label": "Bistro",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            },
+            {
+              "produced": 1,
+              "expected": 1,
+              "strength": 2,
+              "what": "pharmacy",
+              "label": "Pharmacy",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            }
+          ],
+          "fields": {
+            "required": {
+              "correct": 2,
+              "n": 2
+            },
+            "order": {
+              "correct": 2,
+              "n": 2
+            },
+            "count": {
+              "correct": 2,
+              "n": 2
+            },
+            "pace": {
+              "correct": 2,
+              "n": 2
+            },
+            "wish": {
+              "correct": 2,
+              "n": 2
+            }
+          },
+          "kinds": {
+            "fitting": 2,
+            "total": 3
+          },
+          "wishPairs": [
+            {
+              "what": "lunch bistro",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            },
+            {
+              "what": "pharmacy",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            }
+          ],
+          "street": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "streetProperty": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "unsupported": {
+            "expected": false,
+            "produced": false,
+            "correct": true
+          }
+        },
+        "planning": {
+          "requiredUnderstood": 2,
+          "requiredWithStop": 2,
+          "withinBudget": true,
+          "walkOverhead": 1.4,
+          "stops": 2,
+          "skipReasons": [],
+          "coverage": []
+        }
+      },
+      "timing": {
+        "understandMs": 2822,
+        "planMs": 227
+      },
+      "error": null
+    },
+    {
+      "id": "dev-20",
+      "request": "Let's take a long break at a park on our way to Bună Ziua",
+      "notes": "pace=long from 'long break' (no explicit minutes mentioned)",
+      "understanding": {
+        "items": [
+          {
+            "id": "i1",
+            "phrase": "a long break at a park",
+            "label": "Park",
+            "search": [
+              "park"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "leisure/park",
+                "name": "Park",
+                "tags": {
+                  "leisure": "park"
+                }
+              }
+            ],
+            "googleTypes": [
+              "park"
+            ],
+            "required": true,
+            "order": null,
+            "count": 1,
+            "pace": "long",
+            "stayMinutes": 90,
+            "stayFixed": true
+          }
+        ],
+        "street": [],
+        "notices": [],
+        "unsupported": []
+      },
+      "plan": {
+        "origin": {
+          "name": "Piața Timotei Cipariu",
+          "lat": 46.7675172,
+          "lng": 23.6003262
+        },
+        "destination": {
+          "name": "Strada Bună Ziua 34",
+          "lat": 46.7479602,
+          "lng": 23.597538999999998
+        },
+        "stops": [
+          {
+            "itemId": "i1",
+            "label": "Park",
+            "name": "Square Andrei Mureșanu",
+            "lat": 46.767299699999995,
+            "lng": 23.6000785,
+            "source": "google",
+            "wishConfirmed": null,
+            "rating": 4,
+            "address": "Cluj-Napoca",
+            "stayMinutes": 90,
+            "arriveMinute": 1
+          }
+        ],
+        "legs": [
+          {
+            "meters": 94,
+            "minutes": 1
+          },
+          {
+            "meters": 2537,
+            "minutes": 30
+          }
+        ],
+        "totals": {
+          "walkMinutes": 32,
+          "stayMinutes": 90,
+          "totalMinutes": 122,
+          "budgetMinutes": 160,
+          "withinBudget": true,
+          "staysShortened": false,
+          "shortestWalkMinutes": 31
+        },
+        "coverage": [],
+        "skipped": [],
+        "notices": []
+      },
+      "scores": {
+        "understanding": {
+          "itemsProduced": 1,
+          "itemsExpected": 1,
+          "itemsMatched": 1,
+          "pairs": [
+            {
+              "produced": 0,
+              "expected": 0,
+              "strength": 2,
+              "what": "park",
+              "label": "Park",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            }
+          ],
+          "fields": {
+            "required": {
+              "correct": 1,
+              "n": 1
+            },
+            "order": {
+              "correct": 1,
+              "n": 1
+            },
+            "count": {
+              "correct": 1,
+              "n": 1
+            },
+            "pace": {
+              "correct": 1,
+              "n": 1
+            },
+            "wish": {
+              "correct": 1,
+              "n": 1
+            }
+          },
+          "kinds": {
+            "fitting": 1,
+            "total": 1
+          },
+          "wishPairs": [
+            {
+              "what": "park",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            }
+          ],
+          "street": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "streetProperty": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "unsupported": {
+            "expected": false,
+            "produced": false,
+            "correct": true
+          }
+        },
+        "planning": {
+          "requiredUnderstood": 1,
+          "requiredWithStop": 1,
+          "withinBudget": true,
+          "walkOverhead": 1.032258064516129,
+          "stops": 1,
+          "skipReasons": [],
+          "coverage": []
+        }
+      },
+      "timing": {
+        "understandMs": 3390,
+        "planMs": 131
+      },
+      "error": null
+    },
+    {
+      "id": "dev-21",
+      "request": "Find an Italian restaurant with outdoor seating for lunch",
+      "notes": "mappable wishes: cuisine + outdoor seating",
+      "understanding": {
+        "items": [
+          {
+            "id": "i1",
+            "phrase": "Find an Italian restaurant with outdoor seating for lunch",
+            "label": "Italian Restaurant",
+            "search": [
+              "restaurant"
+            ],
+            "details": "Italian cuisine, outdoor seating",
+            "osm": [
+              {
+                "presetId": "amenity/restaurant/italian",
+                "name": "Italian Restaurant",
+                "tags": {
+                  "amenity": "restaurant",
+                  "cuisine": "italian"
+                }
+              }
+            ],
+            "googleTypes": [
+              "restaurant"
+            ],
+            "required": true,
+            "order": null,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 60,
+            "stayFixed": false
+          }
+        ],
+        "street": [],
+        "notices": [],
+        "unsupported": []
+      },
+      "plan": {
+        "origin": {
+          "name": "Piața Unirii",
+          "lat": 46.7694539,
+          "lng": 23.5892214
+        },
+        "destination": {
+          "name": "Parcul Central",
+          "lat": 46.7691448,
+          "lng": 23.5774005
+        },
+        "stops": [
+          {
+            "itemId": "i1",
+            "label": "Italian Restaurant",
+            "name": "Livada - Cluj",
+            "lat": 46.7659197,
+            "lng": 23.582300999999998,
+            "source": "google",
+            "wishConfirmed": "Italian cuisine, outdoor seating",
+            "rating": 4.1,
+            "address": "Str. Clinicilor 14, Cluj-Napoca",
+            "stayMinutes": 60,
+            "arriveMinute": 9
+          }
+        ],
+        "legs": [
+          {
+            "meters": 757,
+            "minutes": 9
+          },
+          {
+            "meters": 635,
+            "minutes": 8
+          }
+        ],
+        "totals": {
+          "walkMinutes": 17,
+          "stayMinutes": 60,
+          "totalMinutes": 77,
+          "budgetMinutes": 110,
+          "withinBudget": true,
+          "staysShortened": false,
+          "shortestWalkMinutes": 13
+        },
+        "coverage": [],
+        "skipped": [],
+        "notices": []
+      },
+      "scores": {
+        "understanding": {
+          "itemsProduced": 1,
+          "itemsExpected": 1,
+          "itemsMatched": 1,
+          "pairs": [
+            {
+              "produced": 0,
+              "expected": 0,
+              "strength": 1,
+              "what": "Italian restaurant",
+              "label": "Italian Restaurant",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            }
+          ],
+          "fields": {
+            "required": {
+              "correct": 1,
+              "n": 1
+            },
+            "order": {
+              "correct": 1,
+              "n": 1
+            },
+            "count": {
+              "correct": 1,
+              "n": 1
+            },
+            "pace": {
+              "correct": 1,
+              "n": 1
+            },
+            "wish": {
+              "correct": 1,
+              "n": 1
+            }
+          },
+          "kinds": {
+            "fitting": 1,
+            "total": 1
+          },
+          "wishPairs": [
+            {
+              "what": "Italian restaurant",
+              "expected": "Italian cuisine, outdoor seating",
+              "produced": "Italian cuisine, outdoor seating",
+              "correct": true
+            }
+          ],
+          "street": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "streetProperty": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "unsupported": {
+            "expected": false,
+            "produced": false,
+            "correct": true
+          }
+        },
+        "planning": {
+          "requiredUnderstood": 1,
+          "requiredWithStop": 1,
+          "withinBudget": true,
+          "walkOverhead": 1.3076923076923077,
+          "stops": 1,
+          "skipReasons": [],
+          "coverage": []
+        }
+      },
+      "timing": {
+        "understandMs": 3188,
+        "planMs": 1872
+      },
+      "error": null
+    },
+    {
+      "id": "dev-22",
+      "request": "I'd like to visit an Orthodox church and then a cosy cafe",
+      "notes": "mappable religion wish + subjective 'cosy' wish",
+      "understanding": {
+        "items": [
+          {
+            "id": "i1",
+            "phrase": "visit an Orthodox church",
+            "label": "Orthodox Church",
+            "search": [
+              "Orthodox church"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "amenity/place_of_worship/christian",
+                "name": "Christian Church",
+                "tags": {
+                  "amenity": "place_of_worship",
+                  "religion": "christian"
+                }
+              }
+            ],
+            "googleTypes": [
+              "church"
+            ],
+            "required": true,
+            "order": 1,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 30,
+            "stayFixed": false
+          },
+          {
+            "id": "i2",
+            "phrase": "visit a cosy cafe",
+            "label": "Cafe",
+            "search": [
+              "cafe"
+            ],
+            "details": "cosy",
+            "osm": [
+              {
+                "presetId": "amenity/cafe",
+                "name": "Cafe",
+                "tags": {
+                  "amenity": "cafe"
+                }
+              }
+            ],
+            "googleTypes": [
+              "cafe"
+            ],
+            "required": true,
+            "order": 2,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 30,
+            "stayFixed": false
+          }
+        ],
+        "street": [],
+        "notices": [],
+        "unsupported": []
+      },
+      "plan": {
+        "origin": {
+          "name": "Strada Avram Iancu",
+          "lat": 46.7667097,
+          "lng": 23.5931729
+        },
+        "destination": {
+          "name": "Strada Iuliu Maniu 14",
+          "lat": 46.770644999999995,
+          "lng": 23.592581000000003
+        },
+        "stops": [
+          {
+            "itemId": "i1",
+            "label": "Orthodox Church",
+            "name": "Catedrala Greco-Catolică „Schimbarea la Față”",
+            "lat": 46.7694271,
+            "lng": 23.5925421,
+            "source": "osm",
+            "wishConfirmed": null,
+            "rating": null,
+            "address": null,
+            "stayMinutes": 30,
+            "arriveMinute": 5
+          },
+          {
+            "itemId": "i2",
+            "label": "Cafe",
+            "name": "Enigma Cafe",
+            "lat": 46.770628,
+            "lng": 23.5924247,
+            "source": "osm",
+            "wishConfirmed": null,
+            "rating": null,
+            "address": null,
+            "stayMinutes": 30,
+            "arriveMinute": 38
+          }
+        ],
+        "legs": [
+          {
+            "meters": 452,
+            "minutes": 5
+          },
+          {
+            "meters": 229,
+            "minutes": 3
+          },
+          {
+            "meters": 25,
+            "minutes": 0
+          }
+        ],
+        "totals": {
+          "walkMinutes": 8,
+          "stayMinutes": 60,
+          "totalMinutes": 68,
+          "budgetMinutes": 90,
+          "withinBudget": true,
+          "staysShortened": false,
+          "shortestWalkMinutes": 8
+        },
+        "coverage": [],
+        "skipped": [],
+        "notices": [
+          "Could not confirm \"cosy\" for any cafe nearby; the stop may not match it."
+        ]
+      },
+      "scores": {
+        "understanding": {
+          "itemsProduced": 2,
+          "itemsExpected": 2,
+          "itemsMatched": 2,
+          "pairs": [
+            {
+              "produced": 0,
+              "expected": 0,
+              "strength": 1,
+              "what": "Orthodox church",
+              "label": "Orthodox Church",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": false
+              }
+            },
+            {
+              "produced": 1,
+              "expected": 1,
+              "strength": 2,
+              "what": "cafe",
+              "label": "Cafe",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            }
+          ],
+          "fields": {
+            "required": {
+              "correct": 2,
+              "n": 2
+            },
+            "order": {
+              "correct": 2,
+              "n": 2
+            },
+            "count": {
+              "correct": 2,
+              "n": 2
+            },
+            "pace": {
+              "correct": 2,
+              "n": 2
+            },
+            "wish": {
+              "correct": 1,
+              "n": 2
+            }
+          },
+          "kinds": {
+            "fitting": 2,
+            "total": 2
+          },
+          "wishPairs": [
+            {
+              "what": "Orthodox church",
+              "expected": "Orthodox",
+              "produced": "",
+              "correct": false
+            },
+            {
+              "what": "cafe",
+              "expected": "cosy",
+              "produced": "cosy",
+              "correct": true
+            }
+          ],
+          "street": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "streetProperty": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "unsupported": {
+            "expected": false,
+            "produced": false,
+            "correct": true
+          }
+        },
+        "planning": {
+          "requiredUnderstood": 2,
+          "requiredWithStop": 2,
+          "withinBudget": true,
+          "walkOverhead": 1,
+          "stops": 2,
+          "skipReasons": [],
+          "coverage": []
+        }
+      },
+      "timing": {
+        "understandMs": 3039,
+        "planMs": 2399
+      },
+      "error": null
+    },
+    {
+      "id": "dev-23",
+      "request": "Take me to a wheelchair-accessible museum",
+      "notes": "lat/lng origin & destination + wheelchair wish",
+      "understanding": {
+        "items": [
+          {
+            "id": "i1",
+            "phrase": "a wheelchair-accessible museum",
+            "label": "Museum",
+            "search": [
+              "museum"
+            ],
+            "details": "wheelchair-accessible",
+            "osm": [
+              {
+                "presetId": "tourism/museum",
+                "name": "Museum",
+                "tags": {
+                  "tourism": "museum"
+                }
+              }
+            ],
+            "googleTypes": [
+              "museum"
+            ],
+            "required": true,
+            "order": null,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 60,
+            "stayFixed": false
+          }
+        ],
+        "street": [
+          {
+            "property": "no_steps",
+            "label": "No stairs",
+            "mode": "require"
+          }
+        ],
+        "notices": [],
+        "unsupported": []
+      },
+      "plan": {
+        "origin": {
+          "name": "Selected point",
+          "lat": 46.7693,
+          "lng": 23.5899
+        },
+        "destination": {
+          "name": "Selected point",
+          "lat": 46.7712,
+          "lng": 23.5835
+        },
+        "stops": [
+          {
+            "itemId": "i1",
+            "label": "Museum",
+            "name": "Muzeul Etnografic al Transilvaniei",
+            "lat": 46.7692242,
+            "lng": 23.5866097,
+            "source": "osm",
+            "wishConfirmed": "wheelchair-accessible",
+            "rating": null,
+            "address": null,
+            "stayMinutes": 60,
+            "arriveMinute": 5
+          }
+        ],
+        "legs": [
+          {
+            "meters": 387,
+            "minutes": 5
+          },
+          {
+            "meters": 546,
+            "minutes": 7
+          }
+        ],
+        "totals": {
+          "walkMinutes": 11,
+          "stayMinutes": 60,
+          "totalMinutes": 71,
+          "budgetMinutes": 120,
+          "withinBudget": true,
+          "staysShortened": false,
+          "shortestWalkMinutes": 9
+        },
+        "coverage": [
+          {
+            "property": "no_steps",
+            "label": "No stairs",
+            "goodWord": "step-free",
+            "badWord": "with stairs",
+            "goodPercent": 100,
+            "badPercent": 0,
+            "unknownPercent": 0
+          }
+        ],
+        "skipped": [],
+        "notices": []
+      },
+      "scores": {
+        "understanding": {
+          "itemsProduced": 1,
+          "itemsExpected": 1,
+          "itemsMatched": 1,
+          "pairs": [
+            {
+              "produced": 0,
+              "expected": 0,
+              "strength": 2,
+              "what": "museum",
+              "label": "Museum",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            }
+          ],
+          "fields": {
+            "required": {
+              "correct": 1,
+              "n": 1
+            },
+            "order": {
+              "correct": 1,
+              "n": 1
+            },
+            "count": {
+              "correct": 1,
+              "n": 1
+            },
+            "pace": {
+              "correct": 1,
+              "n": 1
+            },
+            "wish": {
+              "correct": 1,
+              "n": 1
+            }
+          },
+          "kinds": {
+            "fitting": 1,
+            "total": 1
+          },
+          "wishPairs": [
+            {
+              "what": "museum",
+              "expected": "wheelchair-accessible",
+              "produced": "wheelchair-accessible",
+              "correct": true
+            }
+          ],
+          "street": {
+            "matched": 0,
+            "produced": 1,
+            "expected": 0
+          },
+          "streetProperty": {
+            "matched": 0,
+            "produced": 1,
+            "expected": 0
+          },
+          "unsupported": {
+            "expected": false,
+            "produced": false,
+            "correct": true
+          }
+        },
+        "planning": {
+          "requiredUnderstood": 1,
+          "requiredWithStop": 1,
+          "withinBudget": true,
+          "walkOverhead": 1.2222222222222223,
+          "stops": 1,
+          "skipReasons": [],
+          "coverage": [
+            {
+              "property": "no_steps",
+              "label": "No stairs",
+              "goodWord": "step-free",
+              "badWord": "with stairs",
+              "goodPercent": 100,
+              "badPercent": 0,
+              "unknownPercent": 0
+            }
+          ]
+        }
+      },
+      "timing": {
+        "understandMs": 2751,
+        "planMs": 1649
+      },
+      "error": null
+    },
+    {
+      "id": "dev-24",
+      "request": "I need to withdraw some cash and mail a letter",
+      "notes": "implicit needs -> ATM and post_box/post_office (pace omitted)",
+      "understanding": {
+        "items": [
+          {
+            "id": "i1",
+            "phrase": "withdraw some cash",
+            "label": "ATM",
+            "search": [
+              "atm",
+              "bank"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "amenity/atm",
+                "name": "ATM",
+                "tags": {
+                  "amenity": "atm"
+                }
+              },
+              {
+                "presetId": "amenity/bank",
+                "name": "Bank",
+                "tags": {
+                  "amenity": "bank"
+                }
+              }
+            ],
+            "googleTypes": [
+              "atm",
+              "bank"
+            ],
+            "required": true,
+            "order": null,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 5,
+            "stayFixed": false
+          },
+          {
+            "id": "i2",
+            "phrase": "mail a letter",
+            "label": "Post Office",
+            "search": [
+              "post office",
+              "mailbox"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "amenity/post_office",
+                "name": "Post Office",
+                "tags": {
+                  "amenity": "post_office"
+                }
+              },
+              {
+                "presetId": "amenity/post_box",
+                "name": "Mail Drop Box",
+                "tags": {
+                  "amenity": "post_box"
+                }
+              }
+            ],
+            "googleTypes": [
+              "post_office"
+            ],
+            "required": true,
+            "order": null,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 5,
+            "stayFixed": false
+          }
+        ],
+        "street": [],
+        "notices": [],
+        "unsupported": []
+      },
+      "plan": {
+        "origin": {
+          "name": "Strada Horea 45",
+          "lat": 46.7797256,
+          "lng": 23.5870207
+        },
+        "destination": {
+          "name": "Piața Mihai Viteazu",
+          "lat": 46.7745841,
+          "lng": 23.5900622
+        },
+        "stops": [
+          {
+            "itemId": "i2",
+            "label": "Post Office",
+            "name": "Mail Drop Box",
+            "lat": 46.7740398,
+            "lng": 23.59126,
+            "source": "osm",
+            "wishConfirmed": null,
+            "rating": null,
+            "address": null,
+            "stayMinutes": 5,
+            "arriveMinute": 12
+          },
+          {
+            "itemId": "i1",
+            "label": "ATM",
+            "name": "Intesa Sanpaolo Bank Sucursala Cluj Napoca",
+            "lat": 46.7747185,
+            "lng": 23.5904433,
+            "source": "google",
+            "wishConfirmed": null,
+            "rating": 5,
+            "address": "Piața Mihai Viteazu 11-13, Cluj-Napoca",
+            "stayMinutes": 5,
+            "arriveMinute": 19
+          }
+        ],
+        "legs": [
+          {
+            "meters": 970,
+            "minutes": 12
+          },
+          {
+            "meters": 163,
+            "minutes": 2
+          },
+          {
+            "meters": 117,
+            "minutes": 1
+          }
+        ],
+        "totals": {
+          "walkMinutes": 15,
+          "stayMinutes": 10,
+          "totalMinutes": 25,
+          "budgetMinutes": 45,
+          "withinBudget": true,
+          "staysShortened": false,
+          "shortestWalkMinutes": 10
+        },
+        "coverage": [],
+        "skipped": [],
+        "notices": []
+      },
+      "scores": {
+        "understanding": {
+          "itemsProduced": 2,
+          "itemsExpected": 2,
+          "itemsMatched": 2,
+          "pairs": [
+            {
+              "produced": 0,
+              "expected": 0,
+              "strength": 2,
+              "what": "ATM",
+              "label": "ATM",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "wish": true
+              }
+            },
+            {
+              "produced": 1,
+              "expected": 1,
+              "strength": 2,
+              "what": "post box or post office",
+              "label": "Post Office",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "wish": true
+              }
+            }
+          ],
+          "fields": {
+            "required": {
+              "correct": 2,
+              "n": 2
+            },
+            "order": {
+              "correct": 2,
+              "n": 2
+            },
+            "count": {
+              "correct": 2,
+              "n": 2
+            },
+            "pace": {
+              "correct": 0,
+              "n": 0
+            },
+            "wish": {
+              "correct": 2,
+              "n": 2
+            }
+          },
+          "kinds": {
+            "fitting": 4,
+            "total": 4
+          },
+          "wishPairs": [
+            {
+              "what": "ATM",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            },
+            {
+              "what": "post box or post office",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            }
+          ],
+          "street": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "streetProperty": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "unsupported": {
+            "expected": false,
+            "produced": false,
+            "correct": true
+          }
+        },
+        "planning": {
+          "requiredUnderstood": 2,
+          "requiredWithStop": 2,
+          "withinBudget": true,
+          "walkOverhead": 1.5,
+          "stops": 2,
+          "skipReasons": [],
+          "coverage": []
+        }
+      },
+      "timing": {
+        "understandMs": 3791,
+        "planMs": 466
+      },
+      "error": null
+    },
+    {
+      "id": "dev-25",
+      "request": "My kid urgently needs a restroom and I want to refill my water bottle",
+      "notes": "implicit needs -> toilets + drinking water (pace omitted as ambiguous)",
+      "understanding": {
+        "items": [
+          {
+            "id": "i1",
+            "phrase": "My kid urgently needs a restroom",
+            "label": "Restroom",
+            "search": [
+              "restroom"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "amenity/toilets",
+                "name": "Restroom",
+                "tags": {
+                  "amenity": "toilets"
+                }
+              }
+            ],
+            "googleTypes": [
+              "public_bathroom"
+            ],
+            "required": true,
+            "order": null,
+            "count": 1,
+            "pace": "quick",
+            "stayMinutes": 5,
+            "stayFixed": true
+          },
+          {
+            "id": "i2",
+            "phrase": "I want to refill my water bottle",
+            "label": "Water Refill",
+            "search": [
+              "water fountain",
+              "cafe"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "amenity/drinking_water",
+                "name": "Drinking Water",
+                "tags": {
+                  "amenity": "drinking_water"
+                }
+              },
+              {
+                "presetId": "amenity/cafe",
+                "name": "Cafe",
+                "tags": {
+                  "amenity": "cafe"
+                }
+              }
+            ],
+            "googleTypes": [
+              "fountain",
+              "cafe"
+            ],
+            "required": true,
+            "order": null,
+            "count": 1,
+            "pace": "quick",
+            "stayMinutes": 5,
+            "stayFixed": true
+          }
+        ],
+        "street": [],
+        "notices": [],
+        "unsupported": []
+      },
+      "plan": {
+        "origin": {
+          "name": "Parcul Central",
+          "lat": 46.7691448,
+          "lng": 23.5774005
+        },
+        "destination": {
+          "name": "Cluj Arena",
+          "lat": 46.7686345,
+          "lng": 23.5717021
+        },
+        "stops": [
+          {
+            "itemId": "i2",
+            "label": "Water Refill",
+            "name": "Drinking Water",
+            "lat": 46.7685075,
+            "lng": 23.5756328,
+            "source": "osm",
+            "wishConfirmed": null,
+            "rating": null,
+            "address": null,
+            "stayMinutes": 5,
+            "arriveMinute": 2
+          },
+          {
+            "itemId": "i1",
+            "label": "Restroom",
+            "name": "Public WC",
+            "lat": 46.768133299999995,
+            "lng": 23.5750763,
+            "source": "google",
+            "wishConfirmed": null,
+            "rating": 2.5,
+            "address": "Parcul Central, Chios, Strada George Coșbuc, Cluj-Napoca",
+            "stayMinutes": 5,
+            "arriveMinute": 8
+          }
+        ],
+        "legs": [
+          {
+            "meters": 196,
+            "minutes": 2
+          },
+          {
+            "meters": 63,
+            "minutes": 1
+          },
+          {
+            "meters": 488,
+            "minutes": 6
+          }
+        ],
+        "totals": {
+          "walkMinutes": 9,
+          "stayMinutes": 10,
+          "totalMinutes": 19,
+          "budgetMinutes": 30,
+          "withinBudget": true,
+          "staysShortened": false,
+          "shortestWalkMinutes": 8
+        },
+        "coverage": [],
+        "skipped": [],
+        "notices": []
+      },
+      "scores": {
+        "understanding": {
+          "itemsProduced": 2,
+          "itemsExpected": 2,
+          "itemsMatched": 2,
+          "pairs": [
+            {
+              "produced": 0,
+              "expected": 0,
+              "strength": 2,
+              "what": "toilets",
+              "label": "Restroom",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "wish": true
+              }
+            },
+            {
+              "produced": 1,
+              "expected": 1,
+              "strength": 2,
+              "what": "drinking water",
+              "label": "Water Refill",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "wish": true
+              }
+            }
+          ],
+          "fields": {
+            "required": {
+              "correct": 2,
+              "n": 2
+            },
+            "order": {
+              "correct": 2,
+              "n": 2
+            },
+            "count": {
+              "correct": 2,
+              "n": 2
+            },
+            "pace": {
+              "correct": 0,
+              "n": 0
+            },
+            "wish": {
+              "correct": 2,
+              "n": 2
+            }
+          },
+          "kinds": {
+            "fitting": 2,
+            "total": 3
+          },
+          "wishPairs": [
+            {
+              "what": "toilets",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            },
+            {
+              "what": "drinking water",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            }
+          ],
+          "street": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "streetProperty": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "unsupported": {
+            "expected": false,
+            "produced": false,
+            "correct": true
+          }
+        },
+        "planning": {
+          "requiredUnderstood": 2,
+          "requiredWithStop": 2,
+          "withinBudget": true,
+          "walkOverhead": 1.125,
+          "stops": 2,
+          "skipReasons": [],
+          "coverage": []
+        }
+      },
+      "timing": {
+        "understandMs": 3256,
+        "planMs": 295
+      },
+      "error": null
+    },
+    {
+      "id": "dev-26",
+      "request": "Find me somewhere to sit down for a few minutes and top up my phone battery",
+      "notes": "implicit needs -> seating + device charging (wish=null)",
+      "understanding": {
+        "items": [
+          {
+            "id": "i1",
+            "phrase": "somewhere to sit down for a few minutes",
+            "label": "Seating",
+            "search": [
+              "bench",
+              "park",
+              "seating area"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "amenity/bench",
+                "name": "Bench",
+                "tags": {
+                  "amenity": "bench"
+                }
+              },
+              {
+                "presetId": "leisure/outdoor_seating",
+                "name": "Outdoor Seating Area",
+                "tags": {
+                  "leisure": "outdoor_seating"
+                }
+              },
+              {
+                "presetId": "leisure/park",
+                "name": "Park",
+                "tags": {
+                  "leisure": "park"
+                }
+              }
+            ],
+            "googleTypes": [
+              "park"
+            ],
+            "required": true,
+            "order": null,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 5,
+            "stayFixed": false
+          },
+          {
+            "id": "i2",
+            "phrase": "top up my phone battery",
+            "label": "Phone Charging",
+            "search": [
+              "cafe",
+              "library",
+              "charging station"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "amenity/device_charging_station",
+                "name": "Device Charging Station",
+                "tags": {
+                  "amenity": "device_charging_station"
+                }
+              },
+              {
+                "presetId": "amenity/cafe",
+                "name": "Cafe",
+                "tags": {
+                  "amenity": "cafe"
+                }
+              },
+              {
+                "presetId": "amenity/library",
+                "name": "Library",
+                "tags": {
+                  "amenity": "library"
+                }
+              }
+            ],
+            "googleTypes": [
+              "library",
+              "cafe"
+            ],
+            "required": true,
+            "order": null,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 5,
+            "stayFixed": false
+          }
+        ],
+        "street": [],
+        "notices": [],
+        "unsupported": []
+      },
+      "plan": {
+        "origin": {
+          "name": "Bulevardul Nicolae Titulescu 10",
+          "lat": 46.7683031,
+          "lng": 23.6054704
+        },
+        "destination": {
+          "name": "Detunata Park",
+          "lat": 46.7651104,
+          "lng": 23.6266841
+        },
+        "stops": [
+          {
+            "itemId": "i2",
+            "label": "Phone Charging",
+            "name": "GoK",
+            "lat": 46.7638747,
+            "lng": 23.6085802,
+            "source": "osm",
+            "wishConfirmed": null,
+            "rating": null,
+            "address": null,
+            "stayMinutes": 5,
+            "arriveMinute": 9
+          },
+          {
+            "itemId": "i1",
+            "label": "Seating",
+            "name": "Detunata Park",
+            "lat": 46.7651104,
+            "lng": 23.6266841,
+            "source": "google",
+            "wishConfirmed": null,
+            "rating": 4.6,
+            "address": "Aleea Detunata, Cluj-Napoca",
+            "stayMinutes": 5,
+            "arriveMinute": 33
+          }
+        ],
+        "legs": [
+          {
+            "meters": 723,
+            "minutes": 9
+          },
+          {
+            "meters": 1609,
+            "minutes": 19
+          },
+          {
+            "meters": 59,
+            "minutes": 1
+          }
+        ],
+        "totals": {
+          "walkMinutes": 29,
+          "stayMinutes": 10,
+          "totalMinutes": 39,
+          "budgetMinutes": 55,
+          "withinBudget": true,
+          "staysShortened": false,
+          "shortestWalkMinutes": 23
+        },
+        "coverage": [],
+        "skipped": [],
+        "notices": []
+      },
+      "scores": {
+        "understanding": {
+          "itemsProduced": 2,
+          "itemsExpected": 2,
+          "itemsMatched": 2,
+          "pairs": [
+            {
+              "produced": 0,
+              "expected": 0,
+              "strength": 2,
+              "what": "bench or seating",
+              "label": "Seating",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "wish": true
+              }
+            },
+            {
+              "produced": 1,
+              "expected": 1,
+              "strength": 2,
+              "what": "phone charging point, cafe, or library",
+              "label": "Phone Charging",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "wish": true
+              }
+            }
+          ],
+          "fields": {
+            "required": {
+              "correct": 2,
+              "n": 2
+            },
+            "order": {
+              "correct": 2,
+              "n": 2
+            },
+            "count": {
+              "correct": 2,
+              "n": 2
+            },
+            "pace": {
+              "correct": 0,
+              "n": 0
+            },
+            "wish": {
+              "correct": 2,
+              "n": 2
+            }
+          },
+          "kinds": {
+            "fitting": 4,
+            "total": 6
+          },
+          "wishPairs": [
+            {
+              "what": "bench or seating",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            },
+            {
+              "what": "phone charging point, cafe, or library",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            }
+          ],
+          "street": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "streetProperty": {
+            "matched": 0,
+            "produced": 0,
+            "expected": 0
+          },
+          "unsupported": {
+            "expected": false,
+            "produced": false,
+            "correct": true
+          }
+        },
+        "planning": {
+          "requiredUnderstood": 2,
+          "requiredWithStop": 2,
+          "withinBudget": true,
+          "walkOverhead": 1.2608695652173914,
+          "stops": 2,
+          "skipReasons": [],
+          "coverage": []
+        }
+      },
+      "timing": {
+        "understandMs": 3819,
+        "planMs": 377
+      },
+      "error": null
+    },
+    {
+      "id": "dev-27",
+      "request": "I'm pushing a baby stroller so I absolutely cannot take any stairs, and please use smooth paved paths with proper sidewalks",
+      "notes": "street prefs: no_steps(require), paved(prefer), sidewalk(prefer), no places",
+      "understanding": {
+        "items": [],
+        "street": [
+          {
+            "property": "no_steps",
+            "label": "No stairs",
+            "mode": "require"
+          },
+          {
+            "property": "paved",
+            "label": "Paved, smooth paths",
+            "mode": "prefer"
+          },
+          {
+            "property": "sidewalk",
+            "label": "Sidewalks",
+            "mode": "prefer"
+          }
+        ],
+        "notices": [],
+        "unsupported": []
+      },
+      "plan": {
+        "origin": {
+          "name": "Str. Donath 40",
+          "lat": 46.7724677,
+          "lng": 23.5576121
+        },
+        "destination": {
+          "name": "Parcul Central",
+          "lat": 46.7691448,
+          "lng": 23.5774005
+        },
+        "stops": [],
+        "legs": [
+          {
+            "meters": 2166,
+            "minutes": 26
+          }
+        ],
+        "totals": {
+          "walkMinutes": 26,
+          "stayMinutes": 0,
+          "totalMinutes": 26,
+          "budgetMinutes": 65,
+          "withinBudget": true,
+          "staysShortened": false,
+          "shortestWalkMinutes": 24
+        },
+        "coverage": [
+          {
+            "property": "no_steps",
+            "label": "No stairs",
+            "goodWord": "step-free",
+            "badWord": "with stairs",
+            "goodPercent": 100,
+            "badPercent": 0,
+            "unknownPercent": 0
+          },
+          {
+            "property": "paved",
+            "label": "Paved, smooth paths",
+            "goodWord": "paved",
+            "badWord": "rough or unpaved",
+            "goodPercent": 98,
+            "badPercent": 0,
+            "unknownPercent": 2
+          },
+          {
+            "property": "sidewalk",
+            "label": "Sidewalks",
+            "goodWord": "with a sidewalk or car-free",
+            "badWord": "no sidewalk",
+            "goodPercent": 97,
+            "badPercent": 0,
+            "unknownPercent": 3
+          }
+        ],
+        "skipped": [],
+        "notices": []
+      },
+      "scores": {
+        "understanding": {
+          "itemsProduced": 0,
+          "itemsExpected": 0,
+          "itemsMatched": 0,
+          "pairs": [],
+          "fields": {
+            "required": {
+              "correct": 0,
+              "n": 0
+            },
+            "order": {
+              "correct": 0,
+              "n": 0
+            },
+            "count": {
+              "correct": 0,
+              "n": 0
+            },
+            "pace": {
+              "correct": 0,
+              "n": 0
+            },
+            "wish": {
+              "correct": 0,
+              "n": 0
+            }
+          },
+          "kinds": {
+            "fitting": 0,
+            "total": 0
+          },
+          "wishPairs": [],
+          "street": {
+            "matched": 3,
+            "produced": 3,
+            "expected": 3
+          },
+          "streetProperty": {
+            "matched": 3,
+            "produced": 3,
+            "expected": 3
+          },
+          "unsupported": {
+            "expected": false,
+            "produced": false,
+            "correct": true
+          }
+        },
+        "planning": {
+          "requiredUnderstood": 0,
+          "requiredWithStop": 0,
+          "withinBudget": true,
+          "walkOverhead": 1.0833333333333333,
+          "stops": 0,
+          "skipReasons": [],
+          "coverage": [
+            {
+              "property": "no_steps",
+              "label": "No stairs",
+              "goodWord": "step-free",
+              "badWord": "with stairs",
+              "goodPercent": 100,
+              "badPercent": 0,
+              "unknownPercent": 0
+            },
+            {
+              "property": "paved",
+              "label": "Paved, smooth paths",
+              "goodWord": "paved",
+              "badWord": "rough or unpaved",
+              "goodPercent": 98,
+              "badPercent": 0,
+              "unknownPercent": 2
+            },
+            {
+              "property": "sidewalk",
+              "label": "Sidewalks",
+              "goodWord": "with a sidewalk or car-free",
+              "badWord": "no sidewalk",
+              "goodPercent": 97,
+              "badPercent": 0,
+              "unknownPercent": 3
+            }
+          ]
+        }
+      },
+      "timing": {
+        "understandMs": 1313,
+        "planMs": 30
+      },
+      "error": null
+    },
+    {
+      "id": "dev-28",
+      "request": "Walk me to a late-night pharmacy; it's dark so well-lit streets are mandatory and I'd prefer quiet roads with sidewalks",
+      "notes": "late night + lit(require), quiet(prefer), sidewalk(prefer), wish omitted",
+      "understanding": {
+        "items": [
+          {
+            "id": "i1",
+            "phrase": "a late-night pharmacy",
+            "label": "Pharmacy",
+            "search": [
+              "pharmacy"
+            ],
+            "details": "late-night",
+            "osm": [
+              {
+                "presetId": "amenity/pharmacy",
+                "name": "Pharmacy Counter",
+                "tags": {
+                  "amenity": "pharmacy"
+                }
+              },
+              {
+                "presetId": "shop/chemist",
+                "name": "Drugstore",
+                "tags": {
+                  "shop": "chemist"
+                }
+              }
+            ],
+            "googleTypes": [
+              "pharmacy",
+              "drugstore"
+            ],
+            "required": true,
+            "order": null,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 5,
+            "stayFixed": false
+          }
+        ],
+        "street": [
+          {
+            "property": "lit",
+            "label": "Lit streets",
+            "mode": "require"
+          },
+          {
+            "property": "quiet",
+            "label": "Little traffic",
+            "mode": "prefer"
+          },
+          {
+            "property": "sidewalk",
+            "label": "Sidewalks",
+            "mode": "prefer"
+          }
+        ],
+        "notices": [],
+        "unsupported": []
+      },
+      "plan": {
+        "origin": {
+          "name": "Strada Paris 30",
+          "lat": 46.7778432,
+          "lng": 23.5983348
+        },
+        "destination": {
+          "name": "Piața Mihai Viteazu",
+          "lat": 46.7745841,
+          "lng": 23.5900622
+        },
+        "stops": [
+          {
+            "itemId": "i1",
+            "label": "Pharmacy",
+            "name": "Farmacia Alma",
+            "lat": 46.7747759,
+            "lng": 23.5930315,
+            "source": "osm",
+            "wishConfirmed": null,
+            "rating": null,
+            "address": null,
+            "stayMinutes": 5,
+            "arriveMinute": 7
+          }
+        ],
+        "legs": [
+          {
+            "meters": 557,
+            "minutes": 7
+          },
+          {
+            "meters": 299,
+            "minutes": 4
+          }
+        ],
+        "totals": {
+          "walkMinutes": 10,
+          "stayMinutes": 5,
+          "totalMinutes": 15,
+          "budgetMinutes": 45,
+          "withinBudget": true,
+          "staysShortened": false,
+          "shortestWalkMinutes": 10
+        },
+        "coverage": [
+          {
+            "property": "lit",
+            "label": "Lit streets",
+            "goodWord": "lit",
+            "badWord": "unlit",
+            "goodPercent": 0,
+            "badPercent": 0,
+            "unknownPercent": 100
+          },
+          {
+            "property": "quiet",
+            "label": "Little traffic",
+            "goodWord": "car-free or residential",
+            "badWord": "along main roads",
+            "goodPercent": 49,
+            "badPercent": 0,
+            "unknownPercent": 51
+          },
+          {
+            "property": "sidewalk",
+            "label": "Sidewalks",
+            "goodWord": "with a sidewalk or car-free",
+            "badWord": "no sidewalk",
+            "goodPercent": 94,
+            "badPercent": 5,
+            "unknownPercent": 0
+          }
+        ],
+        "skipped": [],
+        "notices": [
+          "Could not confirm \"late-night\" for any pharmacy nearby; the stop may not match it."
+        ]
+      },
+      "scores": {
+        "understanding": {
+          "itemsProduced": 1,
+          "itemsExpected": 1,
+          "itemsMatched": 1,
+          "pairs": [
+            {
+              "produced": 0,
+              "expected": 0,
+              "strength": 2,
+              "what": "pharmacy",
+              "label": "Pharmacy",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true
+              }
+            }
+          ],
+          "fields": {
+            "required": {
+              "correct": 1,
+              "n": 1
+            },
+            "order": {
+              "correct": 1,
+              "n": 1
+            },
+            "count": {
+              "correct": 1,
+              "n": 1
+            },
+            "pace": {
+              "correct": 1,
+              "n": 1
+            },
+            "wish": {
+              "correct": 0,
+              "n": 0
+            }
+          },
+          "kinds": {
+            "fitting": 1,
+            "total": 2
+          },
+          "wishPairs": [],
+          "street": {
+            "matched": 3,
+            "produced": 3,
+            "expected": 3
+          },
+          "streetProperty": {
+            "matched": 3,
+            "produced": 3,
+            "expected": 3
+          },
+          "unsupported": {
+            "expected": false,
+            "produced": false,
+            "correct": true
+          }
+        },
+        "planning": {
+          "requiredUnderstood": 1,
+          "requiredWithStop": 1,
+          "withinBudget": true,
+          "walkOverhead": 1,
+          "stops": 1,
+          "skipReasons": [],
+          "coverage": [
+            {
+              "property": "lit",
+              "label": "Lit streets",
+              "goodWord": "lit",
+              "badWord": "unlit",
+              "goodPercent": 0,
+              "badPercent": 0,
+              "unknownPercent": 100
+            },
+            {
+              "property": "quiet",
+              "label": "Little traffic",
+              "goodWord": "car-free or residential",
+              "badWord": "along main roads",
+              "goodPercent": 49,
+              "badPercent": 0,
+              "unknownPercent": 51
+            },
+            {
+              "property": "sidewalk",
+              "label": "Sidewalks",
+              "goodWord": "with a sidewalk or car-free",
+              "badWord": "no sidewalk",
+              "goodPercent": 94,
+              "badPercent": 5,
+              "unknownPercent": 0
+            }
+          ]
+        }
+      },
+      "timing": {
+        "understandMs": 3017,
+        "planMs": 2069
+      },
+      "error": null
+    },
+    {
+      "id": "dev-29",
+      "request": "just a well-lit walk home on paved streets without steps, and somewhere sheltered from the wind if possible",
+      "notes": "hard: no places + 3 street prefs + 1 unsupported street wish",
+      "understanding": {
+        "items": [],
+        "street": [
+          {
+            "property": "lit",
+            "label": "Lit streets",
+            "mode": "require"
+          },
+          {
+            "property": "paved",
+            "label": "Paved, smooth paths",
+            "mode": "require"
+          },
+          {
+            "property": "no_steps",
+            "label": "No stairs",
+            "mode": "require"
+          }
+        ],
+        "notices": [
+          "Street wish not supported yet: sheltered from the wind."
+        ],
+        "unsupported": [
+          "sheltered from the wind"
+        ]
+      },
+      "plan": {
+        "origin": {
+          "name": "Piața Unirii",
+          "lat": 46.7694539,
+          "lng": 23.5892214
+        },
+        "destination": {
+          "name": "Strada Constantin Brâncuși 110",
+          "lat": 46.7622524,
+          "lng": 23.610291399999998
+        },
+        "stops": [],
+        "legs": [
+          {
+            "meters": 2168,
+            "minutes": 26
+          }
+        ],
+        "totals": {
+          "walkMinutes": 26,
+          "stayMinutes": 0,
+          "totalMinutes": 26,
+          "budgetMinutes": null,
+          "withinBudget": true,
+          "staysShortened": false,
+          "shortestWalkMinutes": 26
+        },
+        "coverage": [
+          {
+            "property": "lit",
+            "label": "Lit streets",
+            "goodWord": "lit",
+            "badWord": "unlit",
+            "goodPercent": 14,
+            "badPercent": 0,
+            "unknownPercent": 86
+          },
+          {
+            "property": "paved",
+            "label": "Paved, smooth paths",
+            "goodWord": "paved",
+            "badWord": "rough or unpaved",
+            "goodPercent": 99,
+            "badPercent": 0,
+            "unknownPercent": 1
+          },
+          {
+            "property": "no_steps",
+            "label": "No stairs",
+            "goodWord": "step-free",
+            "badWord": "with stairs",
+            "goodPercent": 100,
+            "badPercent": 0,
+            "unknownPercent": 0
+          }
+        ],
+        "skipped": [],
+        "notices": []
+      },
+      "scores": {
+        "understanding": {
+          "itemsProduced": 0,
+          "itemsExpected": 0,
+          "itemsMatched": 0,
+          "pairs": [],
+          "fields": {
+            "required": {
+              "correct": 0,
+              "n": 0
+            },
+            "order": {
+              "correct": 0,
+              "n": 0
+            },
+            "count": {
+              "correct": 0,
+              "n": 0
+            },
+            "pace": {
+              "correct": 0,
+              "n": 0
+            },
+            "wish": {
+              "correct": 0,
+              "n": 0
+            }
+          },
+          "kinds": {
+            "fitting": 0,
+            "total": 0
+          },
+          "wishPairs": [],
+          "street": {
+            "matched": 0,
+            "produced": 3,
+            "expected": 3
+          },
+          "streetProperty": {
+            "matched": 3,
+            "produced": 3,
+            "expected": 3
+          },
+          "unsupported": {
+            "expected": true,
+            "produced": true,
+            "correct": true
+          }
+        },
+        "planning": {
+          "requiredUnderstood": 0,
+          "requiredWithStop": 0,
+          "withinBudget": null,
+          "walkOverhead": 1,
+          "stops": 0,
+          "skipReasons": [],
+          "coverage": [
+            {
+              "property": "lit",
+              "label": "Lit streets",
+              "goodWord": "lit",
+              "badWord": "unlit",
+              "goodPercent": 14,
+              "badPercent": 0,
+              "unknownPercent": 86
+            },
+            {
+              "property": "paved",
+              "label": "Paved, smooth paths",
+              "goodWord": "paved",
+              "badWord": "rough or unpaved",
+              "goodPercent": 99,
+              "badPercent": 0,
+              "unknownPercent": 1
+            },
+            {
+              "property": "no_steps",
+              "label": "No stairs",
+              "goodWord": "step-free",
+              "badWord": "with stairs",
+              "goodPercent": 100,
+              "badPercent": 0,
+              "unknownPercent": 0
+            }
+          ]
+        }
+      },
+      "timing": {
+        "understandMs": 1512,
+        "planMs": 21
+      },
+      "error": null
+    },
+    {
+      "id": "dev-30",
+      "request": "hey can u take me to a surfboard shop lol and maybe a quiet little corner store, keep off busy main roads pls",
+      "notes": "hard: informal tone + rare place in Cluj (surfboard shop) + optional convenience (wish omitted) + quiet",
+      "understanding": {
+        "items": [
+          {
+            "id": "i1",
+            "phrase": "a surfboard shop",
+            "label": "Surfboards",
+            "search": [
+              "surfboard shop"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "shop/water_sports",
+                "name": "Watersport / Swim Shop",
+                "tags": {
+                  "shop": "water_sports"
+                }
+              }
+            ],
+            "googleTypes": [],
+            "required": true,
+            "order": null,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 15,
+            "stayFixed": false
+          },
+          {
+            "id": "i2",
+            "phrase": "a quiet little corner store",
+            "label": "Corner Store",
+            "search": [
+              "convenience store"
+            ],
+            "details": "quiet, little",
+            "osm": [
+              {
+                "presetId": "shop/convenience",
+                "name": "Convenience Store",
+                "tags": {
+                  "shop": "convenience"
+                }
+              }
+            ],
+            "googleTypes": [
+              "convenience_store"
+            ],
+            "required": false,
+            "order": null,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 15,
+            "stayFixed": false
+          }
+        ],
+        "street": [
+          {
+            "property": "quiet",
+            "label": "Little traffic",
+            "mode": "prefer"
+          }
+        ],
+        "notices": [],
+        "unsupported": []
+      },
+      "plan": {
+        "origin": {
+          "name": "Strada Aurel Vlaicu 22",
+          "lat": 46.77908060000001,
+          "lng": 23.621655099999998
+        },
+        "destination": {
+          "name": "Parcul Între Lacuri II",
+          "lat": 46.778782899999996,
+          "lng": 23.6330724
+        },
+        "stops": [
+          {
+            "itemId": "i2",
+            "label": "Corner Store",
+            "name": "Convenience Store",
+            "lat": 46.7793508,
+            "lng": 23.6232699,
+            "source": "osm",
+            "wishConfirmed": null,
+            "rating": null,
+            "address": null,
+            "stayMinutes": 15,
+            "arriveMinute": 2
+          }
+        ],
+        "legs": [
+          {
+            "meters": 160,
+            "minutes": 2
+          },
+          {
+            "meters": 979,
+            "minutes": 12
+          }
+        ],
+        "totals": {
+          "walkMinutes": 14,
+          "stayMinutes": 15,
+          "totalMinutes": 29,
+          "budgetMinutes": 70,
+          "withinBudget": true,
+          "staysShortened": false,
+          "shortestWalkMinutes": 13
+        },
+        "coverage": [
+          {
+            "property": "quiet",
+            "label": "Little traffic",
+            "goodWord": "car-free or residential",
+            "badWord": "along main roads",
+            "goodPercent": 100,
+            "badPercent": 0,
+            "unknownPercent": 0
+          }
+        ],
+        "skipped": [
+          {
+            "itemId": "i1",
+            "label": "Surfboards",
+            "reason": "no_candidates",
+            "message": "No surfboards found near your route.",
+            "cityCount": 0
+          }
+        ],
+        "notices": [
+          "Could not confirm \"quiet, little\" for any corner store nearby; the stop may not match it."
+        ]
+      },
+      "scores": {
+        "understanding": {
+          "itemsProduced": 2,
+          "itemsExpected": 2,
+          "itemsMatched": 1,
+          "pairs": [
+            {
+              "produced": 1,
+              "expected": 1,
+              "strength": 2,
+              "what": "corner store",
+              "label": "Corner Store",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true
+              }
+            }
+          ],
+          "fields": {
+            "required": {
+              "correct": 1,
+              "n": 1
+            },
+            "order": {
+              "correct": 1,
+              "n": 1
+            },
+            "count": {
+              "correct": 1,
+              "n": 1
+            },
+            "pace": {
+              "correct": 1,
+              "n": 1
+            },
+            "wish": {
+              "correct": 0,
+              "n": 0
+            }
+          },
+          "kinds": {
+            "fitting": 1,
+            "total": 1
+          },
+          "wishPairs": [],
+          "street": {
+            "matched": 1,
+            "produced": 1,
+            "expected": 1
+          },
+          "streetProperty": {
+            "matched": 1,
+            "produced": 1,
+            "expected": 1
+          },
+          "unsupported": {
+            "expected": false,
+            "produced": false,
+            "correct": true
+          }
+        },
+        "planning": {
+          "requiredUnderstood": 0,
+          "requiredWithStop": 0,
+          "withinBudget": true,
+          "walkOverhead": 1.0769230769230769,
+          "stops": 1,
+          "skipReasons": [
+            "no_candidates"
+          ],
+          "coverage": [
+            {
+              "property": "quiet",
+              "label": "Little traffic",
+              "goodWord": "car-free or residential",
+              "badWord": "along main roads",
+              "goodPercent": 100,
+              "badPercent": 0,
+              "unknownPercent": 0
+            }
+          ]
+        }
+      },
+      "timing": {
+        "understandMs": 4022,
+        "planMs": 2036
+      },
+      "error": null
+    },
+    {
+      "id": "dev-31",
+      "request": "So I'm heading over from Mănăștur towards the city centre after a super long day at work, and before I finally get to Piața Unirii I really need to pick up some medicine at a pharmcy, and oh yeah if we happen to pass a bakery that's still open I might get a loaf of bread too, though that's not essential, and please stick to streets with sidewalks because my feet hurt",
+      "notes": "hard: long rambling request + typo ('pharmcy') + optional bakery + sidewalk preference",
+      "understanding": {
+        "items": [
+          {
+            "id": "i1",
+            "phrase": "pick up some medicine at a pharmacy",
+            "label": "Pharmacy",
+            "search": [
+              "pharmacy"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "amenity/pharmacy",
+                "name": "Pharmacy Counter",
+                "tags": {
+                  "amenity": "pharmacy"
+                }
+              },
+              {
+                "presetId": "shop/chemist",
+                "name": "Drugstore",
+                "tags": {
+                  "shop": "chemist"
+                }
+              }
+            ],
+            "googleTypes": [
+              "pharmacy",
+              "drugstore"
+            ],
+            "required": true,
+            "order": null,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 5,
+            "stayFixed": false
+          },
+          {
+            "id": "i2",
+            "phrase": "if we happen to pass a bakery that's still open I might get a loaf of bread",
+            "label": "Bakery",
+            "search": [
+              "bakery"
+            ],
+            "details": "",
+            "osm": [
+              {
+                "presetId": "shop/bakery",
+                "name": "Bakery",
+                "tags": {
+                  "shop": "bakery"
+                }
+              }
+            ],
+            "googleTypes": [
+              "bakery"
+            ],
+            "required": false,
+            "order": null,
+            "count": 1,
+            "pace": "normal",
+            "stayMinutes": 15,
+            "stayFixed": false
+          }
+        ],
+        "street": [
+          {
+            "property": "sidewalk",
+            "label": "Sidewalks",
+            "mode": "require"
+          }
+        ],
+        "notices": [],
+        "unsupported": []
+      },
+      "plan": {
+        "origin": {
+          "name": "Market Flora",
+          "lat": 46.757616399999996,
+          "lng": 23.5512719
+        },
+        "destination": {
+          "name": "Piața Unirii",
+          "lat": 46.7694539,
+          "lng": 23.5892214
+        },
+        "stops": [
+          {
+            "itemId": "i2",
+            "label": "Bakery",
+            "name": "Panemar",
+            "lat": 46.7643105,
+            "lng": 23.5739724,
+            "source": "osm",
+            "wishConfirmed": null,
+            "rating": null,
+            "address": null,
+            "stayMinutes": 15,
+            "arriveMinute": 25
+          },
+          {
+            "itemId": "i1",
+            "label": "Pharmacy",
+            "name": "dm drogerie markt",
+            "lat": 46.768860000000004,
+            "lng": 23.58464,
+            "source": "google",
+            "wishConfirmed": null,
+            "rating": 4.4,
+            "address": "Calea Moților 1A, Cluj-Napoca",
+            "stayMinutes": 5,
+            "arriveMinute": 51
+          }
+        ],
+        "legs": [
+          {
+            "meters": 2043,
+            "minutes": 25
+          },
+          {
+            "meters": 994,
+            "minutes": 12
+          },
+          {
+            "meters": 456,
+            "minutes": 5
+          }
+        ],
+        "totals": {
+          "walkMinutes": 42,
+          "stayMinutes": 20,
+          "totalMinutes": 62,
+          "budgetMinutes": 95,
+          "withinBudget": true,
+          "staysShortened": false,
+          "shortestWalkMinutes": 41
+        },
+        "coverage": [
+          {
+            "property": "sidewalk",
+            "label": "Sidewalks",
+            "goodWord": "with a sidewalk or car-free",
+            "badWord": "no sidewalk",
+            "goodPercent": 100,
+            "badPercent": 0,
+            "unknownPercent": 0
+          }
+        ],
+        "skipped": [],
+        "notices": []
+      },
+      "scores": {
+        "understanding": {
+          "itemsProduced": 2,
+          "itemsExpected": 2,
+          "itemsMatched": 2,
+          "pairs": [
+            {
+              "produced": 0,
+              "expected": 0,
+              "strength": 2,
+              "what": "pharmacy",
+              "label": "Pharmacy",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            },
+            {
+              "produced": 1,
+              "expected": 1,
+              "strength": 2,
+              "what": "bakery",
+              "label": "Bakery",
+              "fields": {
+                "required": true,
+                "order": true,
+                "count": true,
+                "pace": true,
+                "wish": true
+              }
+            }
+          ],
+          "fields": {
+            "required": {
+              "correct": 2,
+              "n": 2
+            },
+            "order": {
+              "correct": 2,
+              "n": 2
+            },
+            "count": {
+              "correct": 2,
+              "n": 2
+            },
+            "pace": {
+              "correct": 2,
+              "n": 2
+            },
+            "wish": {
+              "correct": 2,
+              "n": 2
+            }
+          },
+          "kinds": {
+            "fitting": 2,
+            "total": 3
+          },
+          "wishPairs": [
+            {
+              "what": "pharmacy",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            },
+            {
+              "what": "bakery",
+              "expected": null,
+              "produced": "",
+              "correct": true
+            }
+          ],
+          "street": {
+            "matched": 0,
+            "produced": 1,
+            "expected": 1
+          },
+          "streetProperty": {
+            "matched": 1,
+            "produced": 1,
+            "expected": 1
+          },
+          "unsupported": {
+            "expected": false,
+            "produced": false,
+            "correct": true
+          }
+        },
+        "planning": {
+          "requiredUnderstood": 1,
+          "requiredWithStop": 1,
+          "withinBudget": true,
+          "walkOverhead": 1.024390243902439,
+          "stops": 2,
+          "skipReasons": [],
+          "coverage": [
+            {
+              "property": "sidewalk",
+              "label": "Sidewalks",
+              "goodWord": "with a sidewalk or car-free",
+              "badWord": "no sidewalk",
+              "goodPercent": 100,
+              "badPercent": 0,
+              "unknownPercent": 0
+            }
+          ]
+        }
+      },
+      "timing": {
+        "understandMs": 3026,
+        "planMs": 209
+      },
+      "error": null
+    }
+  ]
+}

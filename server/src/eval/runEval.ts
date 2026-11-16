@@ -167,7 +167,8 @@ async function runCase(c: EvalCase, deps: Deps): Promise<CaseResult> {
   let u: Understanding;
   let t = performance.now();
   try {
-    u = await deps.understand(c.request.trim());
+    const name = (l: typeof c.origin) => (typeof l === "string" ? l : l.label ?? null);
+    u = await deps.understand(c.request.trim(), { origin: name(c.origin), destination: name(c.destination) });
   } catch (e) {
     out.error = { stage: "understand", message: errText(e) };
     return out;
