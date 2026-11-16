@@ -17,7 +17,8 @@
  * Search: dynamic programming over (set of filled slots, last place), keeping
  * the quickest way to reach each state. Exact when every item has count 1;
  * with counts above 1 a place already used on the stored best path is skipped,
- * which can in rare cases miss the optimum (reported as `approximate`).
+ * which can in rare cases miss the optimum (reported as `approximate`). A request with more
+ * stops than `maxSlots` is planned on its first stops (reported as `truncated`).
  */
 import { PARAMS } from "../params.js";
 
@@ -63,6 +64,8 @@ export interface PlanResult {
   /** Items with fewer stops than asked, and why. */
   missing: Array<{ itemIndex: number; missing: number; reason: SkipReason }>;
   approximate: boolean;
+  /** Some requested stops were left out of the search because the request had more than maxSlots. */
+  truncated: boolean;
 }
 
 interface Slot {
@@ -101,7 +104,8 @@ export function plan(input: PlanInput): PlanResult {
   });
   slots.sort((a, b) => Number(b.required) - Number(a.required));
   let approximate = items.some((it) => it.count > 1);
-  if (slots.length > PARAMS.maxSlots.value) {
+  const truncated = slots.length > PARAMS.maxSlots.value;
+  if (truncated) {
     slots = slots.slice(0, PARAMS.maxSlots.value);
     approximate = true;
   }
@@ -221,7 +225,7 @@ export function plan(input: PlanInput): PlanResult {
     missing.push({ itemIndex: i, missing: it.count - got, reason });
   });
 
-  return { stops, walkMinutes: walk, stayMinutes, totalMinutes: walk + stayMinutes, staysShortened, missing, approximate };
+  return { stops, walkMinutes: walk, stayMinutes, totalMinutes: walk + stayMinutes, staysShortened, missing, approximate, truncated };
 }
 
 function lexLess(a: number[], b: number[]): boolean {

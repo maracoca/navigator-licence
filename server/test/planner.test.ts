@@ -111,3 +111,13 @@ test("reports when nothing was found", () => {
   assert.equal(r.missing[0].reason, "no_candidates");
   assert.equal(r.walkMinutes, 10);
 });
+
+test("asking for two of something is not reported as a cut request", () => {
+  const r = plan({
+    items: [item({ count: 2, stay: { preferred: 5, min: 5 } })],
+    candidates: [[{ point: 2, rating: null }, { point: 3, rating: null }]],
+    minutes: lineMatrix([0, 10, 3, 6]),
+    budgetMinutes: null,
+  });
+  assert.equal(r.truncated, false);
+});
