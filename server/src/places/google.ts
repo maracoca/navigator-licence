@@ -18,6 +18,8 @@ const FIELDS = [
   "places.regularOpeningHours.periods",
   "places.utcOffsetMinutes",
 ].join(",");
+/** Short description; asked for only when a wish has to be checked (it is a pricier field). */
+const SUMMARY_FIELD = "places.editorialSummary";
 
 export interface OpeningPeriod {
   open: { day: number; hour: number; minute: number };
@@ -35,6 +37,7 @@ export interface GooglePlace {
   /** null = hours unknown. */
   periods: OpeningPeriod[] | null;
   utcOffsetMinutes: number | null;
+  summary: string | null;
 }
 
 interface RawPlace {
@@ -49,6 +52,7 @@ interface RawPlace {
   businessStatus?: string;
   regularOpeningHours?: { periods?: OpeningPeriod[] };
   utcOffsetMinutes?: number;
+  editorialSummary?: { text?: string };
 }
 
 function apiKey(): string {
@@ -57,11 +61,12 @@ function apiKey(): string {
   return k;
 }
 
-async function searchText(body: Record<string, unknown>): Promise<RawPlace[]> {
-  const out = await cached("google-text-search", { body, fields: FIELDS }, async () => {
+async function searchText(body: Record<string, unknown>, withSummary = false): Promise<RawPlace[]> {
+  const fields = withSummary ? `${FIELDS},${SUMMARY_FIELD}` : FIELDS;
+  const out = await cached("google-text-search", { body, fields }, async () => {
     const res = await fetch(URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-Goog-Api-Key": apiKey(), "X-Goog-FieldMask": FIELDS },
+      headers: { "Content-Type": "application/json", "X-Goog-Api-Key": apiKey(), "X-Goog-FieldMask": fields },
       body: JSON.stringify(body),
     });
     if (!res.ok) throw new Error(`Google Places ${res.status}: ${(await res.text()).slice(0, 300)}`);
@@ -83,6 +88,7 @@ function toPlace(p: RawPlace): GooglePlace | null {
     types: [...new Set([p.primaryType, ...(p.types ?? [])].filter((t): t is string => !!t))],
     periods: p.regularOpeningHours?.periods ?? null,
     utcOffsetMinutes: p.utcOffsetMinutes ?? null,
+    summary: p.editorialSummary?.text ?? null,
   };
 }
 
@@ -90,22 +96,36 @@ const rectangle = (b: BBox) => ({
   rectangle: { low: { latitude: b.south, longitude: b.west }, high: { latitude: b.north, longitude: b.east } },
 });
 
-/** Places of one Google type inside the area; extra wishes ("cheap", "catholic") go into the text. */
-export async function searchPlaces(type: string, details: string, area: BBox): Promise<GooglePlace[]> {
-  const raw = await searchText({
-    textQuery: [details, type.replace(/_/g, " ")].filter(Boolean).join(" "),
-    includedType: type,
-    strictTypeFiltering: true,
-    locationRestriction: rectangle(area),
-    pageSize: PARAMS.googleResultsPerSearch.value,
-  });
+/**
+ * Places of one Google type inside the area. The text is the person's wish
+ * plus their own phrase for the place ("modern" + "art museum"), so Google
+ * ranks by what they asked; the type keeps unrelated places out.
+ */
+export async function searchPlaces(type: string, text: string, area: BBox, withSummary: boolean): Promise<GooglePlace[]> {
+  const raw = await searchText(
+    {
+      textQuery: text,
+      includedType: type,
+      strictTypeFiltering: true,
+      locationRestriction: rectangle(area),
+      pageSize: PARAMS.googleResultsPerSearch.value,
+    },
+    withSummary,
+  );
   return raw.map(toPlace).filter((p): p is GooglePlace => p !== null);
 }
 
-/** Start or end typed as text: best match, biased to the city. */
+/** Areas (a whole city, county, country) are not a point to walk from or to. */
+const AREA_TYPES = new Set(["locality", "political", "country", "administrative_area_level_1", "administrative_area_level_2", "administrative_area_level_3", "sublocality", "postal_code"]);
+
+/**
+ * Start or end typed as text: Google's best match near the city that is a
+ * place, not a whole area. "Gara Cluj-Napoca" should be the station, not the city.
+ */
 export async function findLocation(text: string, city: BBox): Promise<GooglePlace | null> {
-  const raw = await searchText({ textQuery: text, locationBias: rectangle(city), pageSize: 1 });
-  return raw.map(toPlace).find((p) => p !== null) ?? null;
+  const raw = await searchText({ textQuery: text, locationBias: rectangle(city), pageSize: 5 });
+  const places = raw.map(toPlace).filter((p): p is GooglePlace => p !== null);
+  return places.find((p) => !p.types.every((t) => AREA_TYPES.has(t) || t === "geocode")) ?? places[0] ?? null;
 }
 
 // ─── Opening hours ──────────────────────────────────────────────────────────

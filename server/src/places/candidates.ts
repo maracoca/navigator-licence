@@ -11,6 +11,7 @@ import { PARAMS, metersPerMinute } from "../params.js";
 import { haversineMeters } from "../routing/router.js";
 import type { Item } from "../types.js";
 import { searchPlaces, type GooglePlace } from "./google.js";
+import { checkWish, type WishFit } from "./wishCheck.js";
 
 export interface Candidate {
   id: string;
@@ -21,12 +22,21 @@ export interface Candidate {
   address: string | null;
   source: "google" | "osm" | "both";
   google: GooglePlace | null;
+  osmTags: Record<string, string> | null;
+  /** How the place fits the item's wish; null when the item has no wish. */
+  wish: WishFit | null;
 }
 
 export interface ItemCandidates {
   candidates: Candidate[];
   /** OSM places of this item's kinds in the whole city; null when the item has no OSM kind. */
   cityCount: number | null;
+  /**
+   * none: no wish; confirmed: places that fit were found and only those are used;
+   * unconfirmed: no place could be confirmed, places that may fit are used;
+   * no_match: every place found clearly does not fit.
+   */
+  wishStatus: "none" | "confirmed" | "unconfirmed" | "no_match";
 }
 
 interface Point {
@@ -69,6 +79,14 @@ function similarNames(a: string | null, b: string | null): boolean {
   return shared / Math.min(wa.size, wb.size) >= 0.5;
 }
 
+/** The person's own phrase for this Google type when one fits, otherwise the type's name. */
+export function googleText(item: Item, type: string): string {
+  const typeName = type.replace(/_/g, " ").toLowerCase();
+  const phrase =
+    item.search.find((s) => s.toLowerCase().includes(typeName) || typeName.includes(s.toLowerCase())) ?? typeName;
+  return [item.details, phrase].filter((s) => s.trim()).join(" ");
+}
+
 /** Some candidates closest to the route, some best-rated within reach. */
 export function choosePool(all: Candidate[], detour: (p: Point) => number): Candidate[] {
   const total = PARAMS.candidatesPerItem.value;
@@ -105,7 +123,8 @@ export async function findCandidates(
       const osm = [...osmAll.values()].filter(reachable);
 
       // Google
-      const googleLists = await Promise.all(item.googleTypes.map((t) => searchPlaces(t, item.details, box)));
+      const hasWish = item.details.trim().length > 0;
+      const googleLists = await Promise.all(item.googleTypes.map((t) => searchPlaces(t, googleText(item, t), box, hasWish)));
       const google = new Map<string, GooglePlace>();
       for (const list of googleLists) for (const g of list) if (reachable(g)) google.set(g.id, g);
 
@@ -117,15 +136,37 @@ export async function findCandidates(
           (o) => !mergedOsm.has(o.id) && haversineMeters(o, g) <= PARAMS.mergeDistanceMeters.value && similarNames(o.name, g.name),
         );
         if (twin) mergedOsm.add(twin.id);
-        out.push({ id: g.id, name: g.name, lat: g.lat, lng: g.lng, rating: g.rating, address: g.address, source: twin ? "both" : "google", google: g });
+        out.push({
+          id: g.id, name: g.name, lat: g.lat, lng: g.lng, rating: g.rating, address: g.address,
+          source: twin ? "both" : "google", google: g, osmTags: twin?.tags ?? null, wish: null,
+        });
       }
       for (const o of osm) {
         if (mergedOsm.has(o.id)) continue;
         const label = o.name ?? item.osm.find((k) => Object.entries(k.tags).every(([kk, v]) => v === "*" || o.tags[kk] === v))?.name ?? item.label;
-        out.push({ id: o.id, name: label, lat: o.lat, lng: o.lng, rating: null, address: null, source: "osm", google: null });
+        out.push({ id: o.id, name: label, lat: o.lat, lng: o.lng, rating: null, address: null, source: "osm", google: null, osmTags: o.tags, wish: null });
       }
 
-      return { candidates: choosePool(out, detour), cityCount };
+      if (!hasWish || out.length === 0) return { candidates: choosePool(out, detour), cityCount, wishStatus: "none" as const };
+
+      // Check the places closest to the route against the wish.
+      const nearest = [...out].sort((a, b) => detour(a) - detour(b)).slice(0, PARAMS.wishCheckMaxCandidates.value);
+      const fits = await checkWish(
+        item.phrase,
+        nearest.map((c) => ({
+          id: c.id,
+          name: c.name,
+          googleTypes: c.google?.types ?? [],
+          summary: c.google?.summary ?? null,
+          osmTags: c.osmTags,
+        })),
+      );
+      for (const c of nearest) c.wish = fits.get(c.id) ?? "unknown";
+      const yes = nearest.filter((c) => c.wish === "yes");
+      const maybe = nearest.filter((c) => c.wish === "unknown");
+      if (yes.length) return { candidates: choosePool(yes, detour), cityCount, wishStatus: "confirmed" as const };
+      if (maybe.length) return { candidates: choosePool(maybe, detour), cityCount, wishStatus: "unconfirmed" as const };
+      return { candidates: [], cityCount, wishStatus: "no_match" as const };
     }),
   );
 }

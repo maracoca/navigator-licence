@@ -37,7 +37,8 @@ Response:
   "street": [
     { "property": "lit", "label": "Lit streets", "mode": "prefer" }   // mode: "prefer" | "require"
   ],
-  "notices": ["Shady streets are not supported yet."]
+  "notices": ["Shady streets are not supported yet."],
+  "unsupported": ["shady"]             // street wishes not on the menu, raw (also in notices); used by the evaluation
 }
 ```
 
@@ -66,6 +67,7 @@ Response:
       "source": "google",                 // "google" | "osm" | "both"
       "rating": 4.6,                       // or null
       "address": "Piața Unirii 30",       // or null
+      "wishConfirmed": "modern",          // the item's wish when this place was confirmed to fit it, else null
       "stayMinutes": 52,
       "arriveMinute": 14                   // minutes after departure
     }
@@ -88,7 +90,7 @@ Response:
 }
 ```
 
-`reason` is one of: `no_candidates`, `unreachable`, `over_budget`, `optional_too_far`, `closed`.
+`reason` is one of: `no_candidates`, `no_match` (places found, but none fits the item's wish/details), `unreachable`, `over_budget`, `optional_too_far`, `closed`.
 
 Notes:
 - `pace` is informational (it was used to compute the first `stayMinutes`); the planner uses `stayMinutes` and `stayFixed`. `order` and `count` are used as sent.

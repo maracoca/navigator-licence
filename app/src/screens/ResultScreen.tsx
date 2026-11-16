@@ -53,6 +53,7 @@ export function ResultScreen(props: { plan: PlanResponse; onEdit: () => void; on
                 {s.label} · arrive at +{minutes(s.arriveMinute)} · stay {minutes(s.stayMinutes)}
                 {s.rating !== null ? ` · ★ ${s.rating.toFixed(1)}` : ''}
               </Text>
+              {s.wishConfirmed ? <Text style={styles.wish}>✓ {s.wishConfirmed}</Text> : null}
               {s.address ? <Text style={styles.muted}>{s.address}</Text> : null}
             </View>
           </View>
@@ -102,6 +103,7 @@ const styles = StyleSheet.create({
   budget: { marginTop: space.xs, color: colors.good },
   note: { marginTop: space.xs, color: colors.warn },
   muted: { color: colors.muted, fontSize: 13, marginTop: 2 },
+  wish: { color: colors.good, fontSize: 13, fontWeight: '600', marginTop: 2 },
   stopRow: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md, paddingVertical: space.sm },
   stopName: { fontSize: 15, fontWeight: '600', color: colors.text },
   dot: { width: 14, height: 14, borderRadius: 7, marginTop: 3, marginHorizontal: 7 },

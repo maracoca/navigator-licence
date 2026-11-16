@@ -69,9 +69,11 @@ function snap(city: CityData, p: { lat: number; lng: number }): Snapped | null {
   return { node, snapMeters: haversineMeters(p, { lat: city.graph.lat[node], lng: city.graph.lng[node] }) };
 }
 
-function skipMessage(reason: SkipReason | "unreachable", label: string): string {
+function skipMessage(reason: SkipReason | "unreachable" | "no_match", label: string, wish: string): string {
   const l = label.toLowerCase();
   switch (reason) {
+    case "no_match":
+      return `No ${l} found near your route that is ${wish}.`;
     case "no_candidates":
       return `No ${l} found near your route.`;
     case "unreachable":
@@ -187,6 +189,8 @@ export async function planWalk(city: CityData, req: PlanRequest) {
       lat: c.lat,
       lng: c.lng,
       source: c.source,
+      /** The item's wish when this place was confirmed to fit it ("modern"), otherwise null. */
+      wishConfirmed: c.wish === "yes" ? item.details : null,
       rating: c.rating,
       address: c.address,
       stayMinutes: s.stayMinutes,
@@ -203,18 +207,27 @@ export async function planWalk(city: CityData, req: PlanRequest) {
 
   const skipped = result.missing.map((m) => {
     const item = req.items[m.itemIndex];
-    const reason = unreachableItems.has(m.itemIndex) ? "unreachable" : m.reason;
+    const reason = unreachableItems.has(m.itemIndex)
+      ? "unreachable"
+      : found[m.itemIndex].wishStatus === "no_match"
+        ? "no_match"
+        : m.reason;
     return {
       itemId: item.id,
       label: item.label,
       reason,
-      message: skipMessage(reason, item.label) + (m.missing < item.count ? ` (${item.count - m.missing} of ${item.count} found)` : ""),
+      message: skipMessage(reason, item.label, item.details) + (m.missing < item.count ? ` (${item.count - m.missing} of ${item.count} found)` : ""),
       cityCount: found[m.itemIndex].cityCount,
     };
   });
 
   const notices: string[] = [];
-  if (result.approximate) notices.push("This request has many stops; the plan is good but may not be the best possible.");
+  req.items.forEach((item, i) => {
+    if (found[i].wishStatus === "unconfirmed" && stops.some((s) => s.itemId === item.id)) {
+      notices.push(`Could not confirm "${item.details}" for any ${item.label.toLowerCase()} nearby; the stop may not match it.`);
+    }
+  });
+  if (result.truncated) notices.push(`This request has more than ${PARAMS.maxSlots.value} stops; only the first ones were planned.`);
 
   const cov: Coverage[] = coverage(graph, req.street, paths);
   return {

@@ -95,6 +95,8 @@ export interface Stop {
   source: PlaceSource;
   rating: number | null;
   address: string | null;
+  /** The item's wish when this place was confirmed to fit it ("modern"), otherwise null. */
+  wishConfirmed?: string | null;
   stayMinutes: number;
   arriveMinute: number;
 }

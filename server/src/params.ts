@@ -60,6 +60,11 @@ export const PARAMS = {
     "assumed",
     "Of the candidates per item, this many are the best-rated places within reach; the rest are the ones closest to the route. Without it, small unrated places next to the route crowd out well-known ones.",
   ),
+  wishCheckMaxCandidates: p(
+    20,
+    "cost-limit",
+    "For an item with a wish ('modern', 'catholic'), at most this many candidates closest to the route are checked against the wish.",
+  ),
   googleResultsPerSearch: p(20, "cost-limit", "Google Text Search returns at most 20 results per request."),
   googleTypeMinScore: p(
     0.5,

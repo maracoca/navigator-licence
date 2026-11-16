@@ -90,10 +90,14 @@ For each place the person wants to visit or pass, return one item:
 - phrase: the person's own words for it.
 - label: a short display name, capitalised ("Museum", "Coffee").
 - search: 1 to 3 plain English names of kinds of place where this can be done, as they would appear on a map
-  (no adjectives, no wishes). Use the thing itself when it is a kind of place ("museum" -> ["museum"]).
+  Name the general kind; style, diet, religion, price and similar qualities are wishes, even when a narrower
+  kind of place exists ("a gothic cathedral" -> ["cathedral"], "a second-hand bookshop" -> ["bookshop"],
+  "a halal butcher" -> ["butcher"]).
+  Use the thing itself when it is a kind of place ("museum" -> ["museum"]).
   When it is a need rather than a place, name the kinds of place that meet it
   ("charge my phone" -> ["cafe", "library"]; "something sweet" -> ["bakery", "ice cream shop"]).
-- details: wishes about the place that are not part of its kind ("catholic", "cheap", "with a terrace"); empty if none.
+- details: every other word that describes which place they want ("gothic", "second-hand", "halal", "with a garden"),
+  in a few words; empty if none. Words about time or optionality do not belong here.
 - required: false only if the words make it optional ("if there's one", "along the way", "maybe", "if possible",
   "if there's time"); otherwise true. Listing things or "then" does not make anything optional.
 - order: 1, 2, 3... only when the person states a sequence ("first", "then", "after that", "finally"); otherwise null.
@@ -107,8 +111,8 @@ For each place the person wants to visit or pass, return one item:
 
 Street preferences: only when the person describes the streets or paths themselves, choose from this menu:
 ${STREET_PROPERTIES.map((p) => `- ${p.id}: ${p.description}`).join("\n")}
-mode "require" when they cannot do without it ("no stairs at all", "I'm in a wheelchair"), otherwise "prefer".
-A wish about the streets that is not on the menu ("shady", "quiet", "flat") goes in unsupported, in a few words.
+mode "require" when they cannot do without it ("no stairs at all"), otherwise "prefer".
+A wish about the streets that is not on the menu ("shady", "flat", "scenic") goes in unsupported, in a few words.
 
 Do not add places or preferences the person did not ask for. Do not include the start or the end point as items.
 `.trim();
@@ -297,5 +301,5 @@ export async function understand(request: string): Promise<Understanding> {
   }
   for (const u of parsed.unsupported) notices.push(`Street wish not supported yet: ${u}.`);
 
-  return { items, street, notices };
+  return { items, street, notices, unsupported: [...parsed.unsupported] };
 }

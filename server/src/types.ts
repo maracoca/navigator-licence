@@ -38,4 +38,6 @@ export interface Understanding {
   items: Item[];
   street: StreetPreference[];
   notices: string[];
+  /** Street wishes that are not on the menu, in the model's words (also listed in notices). */
+  unsupported: string[];
 }
