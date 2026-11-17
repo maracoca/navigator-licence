@@ -247,7 +247,7 @@
           "order": null,
           "count": 1,
           "pace": "normal",
-          "wish": "botanical"
+          "wish": null
         }
       ],
       "street": [],
@@ -563,8 +563,7 @@
           ],
           "required": true,
           "order": null,
-          "pace": "normal",
-          "wish": null
+          "pace": "normal"
         }
       ],
       "street": [],

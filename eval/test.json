@@ -548,18 +548,6 @@
           "count": 1,
           "pace": "normal",
           "wish": null
-        },
-        {
-          "what": "cemetery",
-          "tags": [
-            "landuse=cemetery",
-            "amenity=grave_yard"
-          ],
-          "required": true,
-          "order": 2,
-          "count": 1,
-          "pace": "normal",
-          "wish": null
         }
       ],
       "street": [],
@@ -594,17 +582,6 @@
           ],
           "required": true,
           "order": 2,
-          "count": 1,
-          "pace": "normal",
-          "wish": null
-        },
-        {
-          "what": "park",
-          "tags": [
-            "leisure=park"
-          ],
-          "required": true,
-          "order": 3,
           "count": 1,
           "pace": "normal",
           "wish": null
@@ -961,8 +938,7 @@
           "required": true,
           "order": null,
           "count": 1,
-          "pace": "long",
-          "wish": "botanical"
+          "wish": null
         }
       ],
       "street": [],
@@ -1199,7 +1175,7 @@
           "required": true,
           "order": null,
           "count": 1,
-          "pace": "quick",
+          "pace": "normal",
           "wish": null
         },
         {
@@ -1212,7 +1188,7 @@
           "required": true,
           "order": null,
           "count": 1,
-          "pace": "quick",
+          "pace": "normal",
           "wish": null
         }
       ],
@@ -1238,7 +1214,7 @@
           "required": true,
           "order": null,
           "count": 1,
-          "pace": "quick",
+          "pace": "normal",
           "wish": null
         },
         {
@@ -1249,7 +1225,7 @@
           "required": true,
           "order": null,
           "count": 1,
-          "pace": "quick",
+          "pace": "normal",
           "wish": null
         }
       ],
@@ -1276,7 +1252,7 @@
           "required": true,
           "order": null,
           "count": 1,
-          "pace": "quick",
+          "pace": "normal",
           "wish": null
         },
         {
@@ -1287,7 +1263,7 @@
           "required": true,
           "order": null,
           "count": 1,
-          "pace": "quick",
+          "pace": "normal",
           "wish": null
         }
       ],
@@ -1314,7 +1290,7 @@
           "required": true,
           "order": null,
           "count": 1,
-          "pace": "quick",
+          "pace": "normal",
           "wish": null
         }
       ],
@@ -1470,7 +1446,7 @@
           "order": null,
           "count": 1,
           "pace": "normal",
-          "wish": "ski rental"
+          "wish": null
         },
         {
           "what": "bakery",

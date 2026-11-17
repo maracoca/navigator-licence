@@ -370,3 +370,100 @@ allowed; the effort is part of the saved-answer key and of each run's record. Ea
 
 **Decision:** the app now uses `gpt-6-luna` with effort `none` (`server/.env`, documented in `server/.env.example`) —
 the best street results, at or near the top elsewhere, and the cheapest model tested.
+
+**Reference run on a clean commit:** `eval/runs/2026-11-16_16-07-15_dev.json` — the gpt-6-luna/none run replayed on commit a30b399 (identical scores). This is the dev baseline for the next changes.
+
+---
+
+## E12 — Two expected answers corrected (2026-11-17)
+
+Both were "wrong" for all six model setups in E10–E11; on inspection the expected answers were the problem:
+- **dev-08** "a botanical garden": the expected answer had *botanical* as a wish; it is a kind of place of its own
+  (OSM preset leisure/garden/botanical, Google type botanical_garden), and every model found the real Botanical Garden.
+  Expected wish set to null.
+- **dev-17** "viewpoints overlooking the city": whether this is a wish is ambiguous (most, not all, viewpoints in a city
+  overlook it), so the wish field was removed — not scored either way, as the README allows.
+
+Re-scored from saved answers (no new model calls): `eval/runs/2026-11-17_15-39-51_dev.json`.
+
+**Found along the way (not changed, see ideas):** in dev-17 the wish check used only the one viewpoint whose name confirms
+the city view, so the plan walked 76 min against an 8-min direct walk.
+
+---
+
+## E13 — First test-set run (2026-11-17)
+
+**Run:** `eval/runs/2026-11-17_15-57-47_test.json` — 45 test cases, run once, record mode, 224 s.
+Code = commit a30b399 (gpt-6-luna, effort none; E9 prompt). Uncommitted at the time: docs, dev set and run files only.
+**These are the official test results; the test set was not used for any decision before this run.**
+
+| Metric | Dev (E12) | **Test** |
+|---|---|---|
+| Items P / R | 97.9 % / 97.9 % | **97.0 % (64/66) / 94.1 % (64/68)** |
+| Kinds fitting an expected tag | 93.0 % | **95.8 % (69/72)** |
+| required | 100 % | **100 % (64/64)** |
+| order | 100 % | **100 % (64/64)** |
+| count | 100 % | **98.4 % (63/64)** |
+| pace | 97.6 % | **84.4 % (54/64)** |
+| wish | 100 % | **90.6 % (58/64)** |
+| street, property + mode P / R | 100 % / 100 % | **100 % / 100 % (11/11)** |
+| unsupported street wish | 100 % | **100 % (45/45)** |
+| plans made | 31/31 | **45/45** |
+| all understood required items placed | 96.3 % | **95.0 % (38/40)** |
+| within budget | 100 % | **97.7 % (42/43)** |
+| walk / shortest walk (mean, median) | 1.36, 1.13 | **1.45, 1.17** |
+| understanding / planning time, mean | 3.8 s / 0.5 s | **3.8 s / 1.1 s** |
+
+**Error analysis** (read after the run; nothing was changed because of it)
+
+*App errors*
+- Kind words stored as wishes: "historic" (ruin), "cocktail" (bar), "bottled" (water), "public" (toilet) — 4 cases.
+- Places of worship matched to the *building* kind (`building=church`, `building=synagogue`) instead of
+  `amenity=place_of_worship` (test-22, test-27). The planner still finds churches (in Cluj they usually carry both tags),
+  but the chosen kind is the less precise one.
+- test-39: the time budget (60 min) was shorter than the direct walk (73 min). No stop can fit, but the app reported
+  "no candidates" for both items instead of saying that the time is too short. (Also the only over-budget plan.)
+
+*Expected answers that contradict the README's own rules* (the same kinds of mistakes corrected in the dev set in E12)
+- Pace "quick" for needs whose sentence has no word about a short stay (test-37, 38, 39, 40; 7 of the 10 pace errors);
+  "a full hour" expected as pace long (test-29) where the app records a stated duration instead.
+- The destination expected as a stop: test-17 (the cemetery is the end of the walk), test-18 ("end at a park", the park is
+  the end) — the app correctly leaves the end out (E9 rule).
+- A kind of place expected as a wish: "botanical" (test-29, as dev-08), "ski rental" (test-45).
+
+**Agreed before the run:** the scores above are the official first test result.
+**Proposed (owner to decide):** do not change the test expected answers now; if they are corrected later, report the scores
+both as first measured and after correction, with the list of changes.
+
+---
+
+## E14 — Test set re-scored after correcting human errors in expected answers (2026-11-17)
+
+**What:** only the answer sheet changed; the app, the prompts and the model answers are exactly those of E13
+(re-scored from the saved answers): `eval/runs/2026-11-17_17-37-31_test.json`.
+
+**Corrections** (each one an expected answer that contradicts the README's own rules, where the app followed them):
+- test-17: removed "cemetery" as a stop — the walk ends at the cemetery.
+- test-18: removed "park" as a stop — "end at a park", the park is the end of the walk.
+- test-29: wish "botanical" → null (a botanical garden is a kind of place); pace removed ("a full hour" is a stated duration, not a pace).
+- test-45: wish "ski rental" → null (it is the kind of place).
+- test-37, 38, 39, 40: pace quick → normal for 7 items (no word in the sentence about a short stay).
+Not changed (debatable, or the app is wrong): test-19 pace, the church/synagogue building kinds, the four kind words stored as wishes.
+
+| Metric | First test (E13) | **After corrections (E14)** |
+|---|---|---|
+| Items P / R | 97.0 % / 94.1 % | **97.0 % / 97.0 % (64/66)** |
+| Kinds fitting | 95.8 % | 95.8 % |
+| required / order | 100 % / 100 % | 100 % / 100 % |
+| count | 98.4 % | 98.4 % |
+| pace | 84.4 % (54/64) | **96.8 % (61/63)** |
+| wish | 90.6 % (58/64) | **93.8 % (60/64)** |
+| street P / R | 100 % / 100 % | 100 % / 100 % |
+| unsupported street wish | 100 % | 100 % |
+
+**Remaining test errors are the app's own:** kind words stored as wishes ("historic", "cocktail", "bottled", "public");
+places of worship matched to building kinds (test-22, test-27); test-19 pace; test-39 message when the time budget is
+shorter than the direct walk.
+
+**For the thesis:** report both — E13 as first measured, E14 after correcting annotation errors, with this list.
+The app has not been changed because of the test set.
