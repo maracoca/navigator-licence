@@ -1,0 +1,235 @@
+/**
+ * npm run bench:planner [-- --quick]
+ *
+ * The planner study: the exact planner compared with brute force, greedy, cheapest insertion and
+ * insertion + local search, on
+ *   1. small random problems (straight-line times, from a seed) — is each planner's plan the best one?
+ *   2. realistic problems on the city's real places and street walking times — quality and speed;
+ *   3. growing numbers of stops — how the exact planner's run time grows.
+ * No LLM and no network. Writes eval/planner-runs/<time>_planner.json (all numbers),
+ * <time>_planner.md (tables) and <time>_problems.json (the city problems, so they can be re-run).
+ */
+import { execSync } from "node:child_process";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { loadCity } from "../../data/cityStore.js";
+import { PARAMS } from "../../params.js";
+import { plan, type PlanInput, type PlanResult } from "../../planning/planner.js";
+import { bruteForce, cheapestInsertion, greedy, localSearch } from "../../planning/baselines.js";
+import { cityProblems, syntheticProblems, toPlanInput, type StoredProblem } from "./problems.js";
+
+const ROOT = fileURLToPath(new URL("../../../../", import.meta.url));
+const OUT_DIR = path.join(ROOT, "eval", "planner-runs");
+const quick = process.argv.includes("--quick");
+
+const PLANNERS: Record<string, (p: PlanInput) => PlanResult> = {
+  exact: plan,
+  greedy,
+  insertion: cheapestInsertion,
+  local: localSearch,
+};
+const NAMES = Object.keys(PLANNERS);
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+function scoreOf(input: PlanInput, res: PlanResult): number[] {
+  const req = res.stops.filter((s) => input.items[s.itemIndex].required).length;
+  const rating = res.stops.reduce((sum, s) => sum + (input.candidates[s.itemIndex][s.candidateIndex].rating ?? 0), 0);
+  return [-req, -(res.stops.length - req), res.walkMinutes - rating * PARAMS.ratingTiebreakMinutesPerStar.value];
+}
+
+function compare(a: number[], b: number[]): number {
+  for (let i = 0; i < a.length; i++) if (Math.abs(a[i] - b[i]) > 1e-6) return a[i] < b[i] ? -1 : 1;
+  return 0;
+}
+
+/** Milliseconds per run; repeats fast planners so the timer can see them. */
+function timeIt(fn: () => unknown, maxReps = 200): number {
+  const t0 = performance.now();
+  fn();
+  const first = performance.now() - t0;
+  if (first > 20 || maxReps <= 1) return first;
+  let reps = 1;
+  const t1 = performance.now();
+  while (reps < maxReps && performance.now() - t1 < 20) {
+    fn();
+    reps++;
+  }
+  return (performance.now() - t1) / (reps - 1 || 1);
+}
+
+const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
+const median = (xs: number[]) => {
+  if (!xs.length) return null;
+  const s = [...xs].sort((a, b) => a - b);
+  return s[Math.floor(s.length / 2)];
+};
+const fmt = (x: number | null, d = 2) => (x === null ? "–" : x.toFixed(d));
+const pct = (n: number, d: number) => (d ? `${((100 * n) / d).toFixed(1)} %` : "–");
+
+interface Comparison {
+  n: number;
+  worse: number;
+  better: number;
+  fewerStops: number;
+  /** For plans with the same stops covered but a worse walking/rating score: extra minutes. */
+  extraWhenSameStops: number[];
+}
+
+function emptyComparison(): Comparison {
+  return { n: 0, worse: 0, better: 0, fewerStops: 0, extraWhenSameStops: [] };
+}
+
+function addComparison(c: Comparison, mine: number[], ref: number[]): void {
+  c.n++;
+  const d = compare(mine, ref);
+  if (d < 0) c.better++;
+  if (d > 0) {
+    c.worse++;
+    if (mine[0] !== ref[0] || mine[1] !== ref[1]) c.fewerStops++;
+    else c.extraWhenSameStops.push(mine[2] - ref[2]);
+  }
+}
+
+function git(): { commit: string | null; dirty: boolean } {
+  try {
+    const commit = execSync("git rev-parse HEAD", { cwd: ROOT }).toString().trim();
+    const dirty = execSync("git status --porcelain", { cwd: ROOT }).toString().trim().length > 0;
+    return { commit, dirty };
+  } catch {
+    return { commit: null, dirty: true };
+  }
+}
+
+// ─── 1. Small random problems vs brute force ────────────────────────────────
+
+const SYN_SEED = 42;
+const SYN_COUNT = quick ? 300 : 3000;
+console.log(`1/3 Small random problems: ${SYN_COUNT} (seed ${SYN_SEED}) vs brute force ...`);
+const synthetic = syntheticProblems(SYN_SEED, SYN_COUNT);
+const synResults: Record<string, Comparison> = Object.fromEntries(NAMES.map((n) => [n, emptyComparison()]));
+for (const p of synthetic) {
+  const input = toPlanInput(p);
+  const ref = scoreOf(input, bruteForce(input));
+  for (const n of NAMES) addComparison(synResults[n], scoreOf(input, PLANNERS[n](input)), ref);
+}
+
+// ─── 2. Realistic problems on the city's map ────────────────────────────────
+
+const city = await loadCity(process.env.CITY?.trim() || "cluj-napoca");
+const CITY_SEED = 7;
+const CANDIDATES = PARAMS.candidatesPerItem.value;
+const BRUTE_MAX_SLOTS = 3;
+const AREA = { south: 46.755, west: 23.56, north: 46.785, east: 23.625 };
+const perSize: Record<number, number> = quick ? { 1: 5, 2: 5, 3: 5, 4: 5, 5: 3 } : { 1: 30, 2: 30, 3: 30, 4: 30, 5: 20, 6: 20, 7: 10 };
+console.log(`2/3 City problems on ${city.config.name}: ${JSON.stringify(perSize)} (seed ${CITY_SEED}, ${CANDIDATES} candidates per item) ...`);
+const cityList = cityProblems(city, { seed: CITY_SEED, perSize, candidatesPerItem: CANDIDATES, area: AREA });
+
+interface CityRow {
+  id: string;
+  slots: number;
+  reference: "brute" | "exact";
+  scores: Record<string, number[]>;
+  ms: Record<string, number>;
+}
+const cityRows: CityRow[] = [];
+for (const p of cityList) {
+  const input = toPlanInput(p);
+  const scores: Record<string, number[]> = {};
+  const ms: Record<string, number> = {};
+  for (const n of NAMES) {
+    let res!: PlanResult;
+    ms[n] = timeIt(() => (res = PLANNERS[n](input)));
+    scores[n] = scoreOf(input, res);
+  }
+  let reference: CityRow["reference"] = "exact";
+  if (p.slots <= BRUTE_MAX_SLOTS) {
+    let res!: PlanResult;
+    ms.brute = timeIt(() => (res = bruteForce(input)), 3);
+    scores.brute = scoreOf(input, res);
+    reference = "brute";
+  }
+  cityRows.push({ id: p.id, slots: p.slots, reference, scores, ms });
+}
+
+const sizes = [...new Set(cityRows.map((r) => r.slots))].sort((a, b) => a - b);
+const citySummary = sizes.map((slots) => {
+  const rows = cityRows.filter((r) => r.slots === slots);
+  const per: Record<string, { cmp: Comparison; ms: number[] }> = {};
+  for (const n of [...NAMES, ...(rows[0].reference === "brute" ? ["brute"] : [])]) {
+    const cmp = emptyComparison();
+    for (const r of rows) addComparison(cmp, r.scores[n], r.scores[r.reference]);
+    per[n] = { cmp, ms: rows.map((r) => r.ms[n]) };
+  }
+  return { slots, problems: rows.length, reference: rows[0].reference, per };
+});
+
+// ─── 3. Exact planner run time as stops grow ────────────────────────────────
+
+const SCALE_MAX = quick ? 8 : 10;
+const scalePerSize = quick ? 2 : 5;
+console.log(`3/3 Run time for 1..${SCALE_MAX} stops (${scalePerSize} problems each) ...`);
+const savedMaxSlots = PARAMS.maxSlots.value;
+(PARAMS.maxSlots as { value: number }).value = SCALE_MAX;
+const scaleProblems = cityProblems(city, {
+  seed: CITY_SEED + 1,
+  perSize: Object.fromEntries(Array.from({ length: SCALE_MAX }, (_, i) => [i + 1, scalePerSize])),
+  candidatesPerItem: CANDIDATES,
+  area: AREA,
+});
+const scaling = Array.from({ length: SCALE_MAX }, (_, i) => i + 1).map((slots) => {
+  const ps = scaleProblems.filter((p) => p.slots === slots);
+  const ms: Record<string, number[]> = Object.fromEntries(NAMES.map((n) => [n, [] as number[]]));
+  for (const p of ps) {
+    const input = toPlanInput(p);
+    for (const n of NAMES) ms[n].push(timeIt(() => PLANNERS[n](input), slots >= 8 ? 1 : 200));
+  }
+  console.log(`   ${slots} stops: exact median ${fmt(median(ms.exact))} ms`);
+  return { slots, problems: ps.length, ms };
+});
+(PARAMS.maxSlots as { value: number }).value = savedMaxSlots;
+
+// ─── Write results ──────────────────────────────────────────────────────────
+
+const stamp = new Date().toISOString().slice(0, 19).replace("T", "_").replace(/:/g, "-");
+const meta = {
+  date: new Date().toISOString(),
+  git: git(),
+  node: process.version,
+  quick,
+  city: city.config.name,
+  seeds: { synthetic: SYN_SEED, city: CITY_SEED, scaling: CITY_SEED + 1 },
+  candidatesPerItem: CANDIDATES,
+  bruteMaxSlots: BRUTE_MAX_SLOTS,
+  params: Object.fromEntries(Object.entries(PARAMS).map(([k, v]) => [k, v.value])),
+};
+await mkdir(OUT_DIR, { recursive: true });
+const base = path.join(OUT_DIR, `${stamp}`);
+await writeFile(`${base}_problems.json`, JSON.stringify({ meta, problems: cityList }));
+await writeFile(`${base}_planner.json`, JSON.stringify({ meta, synthetic: synResults, city: { rows: cityRows, summary: citySummary }, scaling }, null, 1));
+
+const md: string[] = [];
+md.push(`# Planner study — ${meta.date.slice(0, 10)}`, "");
+md.push(`Commit ${meta.git.commit?.slice(0, 7) ?? "?"}${meta.git.dirty ? " (with uncommitted changes)" : ""}, ${meta.city}, Node ${meta.node}${quick ? ", QUICK run" : ""}.`, "");
+md.push(`## 1. Small random problems vs brute force (${SYN_COUNT} problems, seed ${SYN_SEED})`, "");
+md.push("| Planner | worse than best | of which fewer stops | extra min when same stops (median / max) | better than best (= bug) |", "|---|---|---|---|---|");
+for (const n of NAMES) {
+  const c = synResults[n];
+  md.push(`| ${n} | ${c.worse} (${pct(c.worse, c.n)}) | ${c.fewerStops} | ${fmt(median(c.extraWhenSameStops))} / ${fmt(c.extraWhenSameStops.length ? Math.max(...c.extraWhenSameStops) : null)} | ${c.better} |`);
+}
+md.push("", `## 2. City problems (${cityList.length} problems, real places and street walking times, ${CANDIDATES} candidates per item)`, "");
+md.push(`Reference = brute force up to ${BRUTE_MAX_SLOTS} stops, the exact planner above that. Ratings are not used (OSM places).`, "");
+md.push("| Stops | Problems | Planner | worse than reference | fewer stops | extra min when same stops (mean) | run time ms (median) |", "|---|---|---|---|---|---|---|");
+for (const s of citySummary) {
+  for (const [n, v] of Object.entries(s.per)) {
+    md.push(`| ${s.slots} | ${s.problems} | ${n} | ${v.cmp.worse} (${pct(v.cmp.worse, v.cmp.n)}) | ${v.cmp.fewerStops} | ${fmt(mean(v.cmp.extraWhenSameStops))} | ${fmt(median(v.ms), 3)} |`);
+  }
+}
+md.push("", `## 3. Run time as the number of stops grows (${scalePerSize} city problems per size, ${CANDIDATES} candidates per item)`, "");
+md.push(`| Stops | ${NAMES.map((n) => `${n} ms (median)`).join(" | ")} |`, `|---|${NAMES.map(() => "---").join("|")}|`);
+for (const s of scaling) md.push(`| ${s.slots} | ${NAMES.map((n) => fmt(median(s.ms[n]), 3)).join(" | ")} |`);
+await writeFile(`${base}_planner.md`, md.join("\n") + "\n");
+
+console.log(`\nSaved ${path.relative(ROOT, base)}_planner.md, _planner.json, _problems.json`);
+console.log("\n" + md.join("\n"));

@@ -467,3 +467,90 @@ shorter than the direct walk.
 
 **For the thesis:** report both — E13 as first measured, E14 after correcting annotation errors, with this list.
 The app has not been changed because of the test set.
+
+---
+
+## E15 — Is the "exact" planner exact? First check against brute force (2026-11-17, preliminary — superseded by E16)
+
+**What:** the planner rules were moved into one shared module (`planning/routeRules.ts`) so that every planner is judged
+the same way; the exact planner was switched to it (the 31 dev plans are identical before and after). Four alternative
+planners were added (`planning/baselines.ts`): brute force (every combination and order), greedy (closest stop that still
+fits), cheapest insertion, and insertion + local search (move, 2-opt, swap place, add, drop optional).
+They were compared on 3,000 small random problems (1–3 items, 1–4 candidates each, sometimes two of an item, an order,
+optional stops, opening windows, budgets; straight-line walking times; seed 42). Preliminary: run from a throwaway
+script; the planner benchmark will reproduce it from saved problems.
+
+**Results** (how often each planner's plan is worse than brute force; never better):
+| Planner | worse than the best plan |
+|---|---|
+| exact (dynamic programming) | 161 / 3000 (5.4 %) |
+| insertion + local search | 318 (10.6 %) |
+| cheapest insertion | 682 (22.7 %) |
+| greedy | 1268 (42.3 %) |
+
+**The exact planner is not always exact.** Switching rules off one at a time:
+| Rules switched off | exact worse |
+|---|---|
+| none | 161 |
+| rating tie-break | 39 |
+| + opening hours | 39 (no effect) |
+| + two of the same item | 21 |
+| + optional stops (5-min detour limit) | **0 of 3000** |
+
+Of the 161 misses, 19 have fewer stops than possible and 142 the same stops with a worse walking/rating score
+(median +2.1 min, max +8.5 min).
+
+**Why:** the dynamic program keeps, for each state "these stops done, standing here", only the *fastest* way to get there.
+Three rules are decided by more than speed: the rating tie-break (a slightly slower but better-rated path is thrown away),
+the optional-stop detour limit (it depends on the *next* stop, which is not known yet when paths are pruned), and
+"two of the same" (the stored path decides which places are already used). Without these rules it matches brute force
+in every case, so the core search is correct.
+
+**Possible fix (not done yet):** keep, per state, every path that is not beaten on all of time, rating and the
+optional-stop situation (a standard "label" technique from constrained shortest-path search), and check an optional stop's
+detour when the next stop is added.
+
+---
+
+## E16 — Planner benchmark (2026-11-17)
+
+**What:** `npm run bench:planner` (no LLM, no network). Results: `eval/planner-runs/2026-11-17_16-54-02_planner.md`
+(tables), `_planner.json` (all numbers), `_problems.json` (the 170 city problems, so they can be re-run). Code: commit
+6e017bf + the planner study files (uncommitted at the time). Same five planners as E15; this run replaces E15's numbers
+(the random generator was rewritten as part of the benchmark, so the counts differ slightly).
+New automated tests (`test/baselines.test.ts`): no planner ever beats brute force; every planner keeps the budget and
+uses each place once; with the three special rules off, the exact planner always equals brute force. 42 tests pass.
+
+**1. 3,000 small random problems vs brute force** (straight-line times, seed 42)
+| Planner | worse than the best plan | of which fewer stops | extra minutes when same stops (median / max) |
+|---|---|---|---|
+| exact | 172 (5.7 %) | 20 | 2.1 / 18.0 |
+| insertion + local search | 351 (11.7 %) | 178 | 2.3 / 17.6 |
+| cheapest insertion | 723 (24.1 %) | 193 | 2.8 / 22.3 |
+| greedy | 1286 (42.9 %) | 420 | 4.2 / 25.2 |
+No planner was ever better than brute force.
+
+**2. 170 realistic problems on Cluj** (real OSM places, real street walking times, 8 candidates per item, seed 7;
+1–7 requested stops; some optional, some ordered, some "two of"; budgets from none to tight; no ratings, no opening hours).
+Reference: brute force up to 3 stops, the exact planner above.
+- The exact planner equalled brute force in **all 90 problems with 1–3 stops** (no ratings here, the main cause of E15's misses).
+- Greedy was worse in 70 % of 1-stop problems and in **every** problem with 3 or more stops, typically 5–9 min more walking,
+  and often with fewer stops.
+- Cheapest insertion: worse in 43–90 % of problems with 2+ stops (≈1–3 min more walking).
+- Insertion + local search: worse in 20–80 % of problems with 2+ stops, usually by 0.6–2.4 min, sometimes one stop fewer.
+
+**3. Run time of the exact planner as stops grow** (5 city problems per size, 8 candidates; median ms)
+| Stops | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| exact | 0.05 | 0.08 | 0.40 | 1.4 | 2.6 | 5.7 | 22 | 21 | 139 | 264 |
+| local search | 0.04 | 0.10 | 0.36 | 0.74 | 1.4 | 1.6 | 2.9 | 3.4 | 6.0 | 5.0 |
+Growth is exponential (roughly ×2 per extra stop), but even 10 stops take about a quarter of a second, so the current
+limit of 7 stops (`maxSlots`) is conservative. Heuristics stay in the low milliseconds.
+
+**Takeaways**
+- For requests of realistic size, exact search is fast enough, and the simple heuristics are measurably worse —
+  greedy clearly so. This justifies the exact planner with numbers.
+- The exact planner's remaining flaw (E15: rating tie-break, optional-stop detour limit, "two of") shows up on the
+  random problems, not on the city problems without ratings. Fixing it remains an open decision.
+- Limits of this run: city problems have no ratings or opening hours; above 3 stops the reference is the exact planner
+  itself, so its own misses there cannot be seen; 5 problems per size for the run-time curve.

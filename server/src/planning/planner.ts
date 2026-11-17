@@ -20,7 +20,7 @@
  * which can in rare cases miss the optimum (reported as `approximate`). A request with more
  * stops than `maxSlots` is planned on its first stops (reported as `truncated`).
  */
-import { PARAMS } from "../params.js";
+import { buildSlots, checkRoute, finishPlan, lexLess, type RouteStop } from "./routeRules.js";
 
 export interface PlanItem {
   required: boolean;
@@ -68,14 +68,6 @@ export interface PlanResult {
   truncated: boolean;
 }
 
-interface Slot {
-  item: number;
-  /** Which copy of the item (0..count-1); copies are filled in order. */
-  copy: number;
-  required: boolean;
-  order: number | null;
-}
-
 interface State {
   mask: number;
   point: number;
@@ -97,18 +89,8 @@ export function plan(input: PlanInput): PlanResult {
   const { items, candidates, minutes, budgetMinutes } = input;
   const budget = budgetMinutes ?? Infinity;
 
-  // Slots: one per requested stop; required items first so a cut keeps them.
-  let slots: Slot[] = [];
-  items.forEach((it, i) => {
-    for (let c = 0; c < it.count; c++) slots.push({ item: i, copy: c, required: it.required, order: it.order });
-  });
-  slots.sort((a, b) => Number(b.required) - Number(a.required));
-  let approximate = items.some((it) => it.count > 1);
-  const truncated = slots.length > PARAMS.maxSlots.value;
-  if (truncated) {
-    slots = slots.slice(0, PARAMS.maxSlots.value);
-    approximate = true;
-  }
+  const { slots, truncated } = buildSlots(input);
+  const approximate = truncated || items.some((it) => it.count > 1);
   const S = slots.length;
   const slotIndex = new Map(slots.map((s, i) => [`${s.item}:${s.copy}`, i]));
 
@@ -158,79 +140,16 @@ export function plan(input: PlanInput): PlanResult {
     }
   }
 
-  // Pick the best finished plan.
-  const cap = PARAMS.optionalMaxDetourMinutes.value;
-  const tiebreak = PARAMS.ratingTiebreakMinutesPerStar.value;
-  let chosen: { state: State; walk: number; score: number[] } | null = null;
-  let optionalRejectedByDetour = new Set<number>();
-
+  // Pick the best finished plan, judged by the shared rules (routeRules.ts).
+  let chosen: { route: RouteStop[]; score: number[] } | null = null;
+  const optionalRejectedByDetour = new Set<number>();
   for (const st of best.values()) {
-    const toEnd = minutes[st.point][1];
-    if (!Number.isFinite(toEnd) || st.time + toEnd > budget) continue;
-    const path = pathOf(st);
-    const pts = [0, ...path.map((x) => x.point), 1];
-    let detourOk = true;
-    path.forEach((x, k) => {
-      if (slots[x.slot].required) return;
-      const added = minutes[pts[k]][pts[k + 1]] + minutes[pts[k + 1]][pts[k + 2]] - minutes[pts[k]][pts[k + 2]];
-      if (added > cap) {
-        detourOk = false;
-        optionalRejectedByDetour.add(slots[x.slot].item);
-      }
-    });
-    if (!detourOk) continue;
-    const walk = st.walk + toEnd;
-    const req = path.filter((x) => slots[x.slot].required).length;
-    const opt = path.length - req;
-    const rating = path.reduce((sum, x) => sum + (candidates[slots[x.slot].item][x.cand].rating ?? 0), 0);
-    const score = [-req, -opt, walk - rating * tiebreak];
-    if (!chosen || lexLess(score, chosen.score)) chosen = { state: st, walk, score };
+    const route = pathOf(st).map((x) => ({ slot: x.slot, cand: x.cand }));
+    const check = checkRoute(input, slots, route);
+    for (const i of check.detourBroken) optionalRejectedByDetour.add(i);
+    if (!check.valid) continue;
+    if (!chosen || lexLess(check.score, chosen.score)) chosen = { route, score: check.score };
   }
 
-  const finalPath = chosen ? pathOf(chosen.state) : [];
-  const walk = chosen?.walk ?? minutes[0][1];
-
-  // Lengthen stays back towards preferred, shared out evenly, within the budget.
-  const stops: PlannedStop[] = finalPath.map((x) => ({
-    itemIndex: slots[x.slot].item,
-    candidateIndex: x.cand,
-    point: x.point,
-    stayMinutes: items[slots[x.slot].item].stay.min,
-  }));
-  let spare = budget - walk - stops.reduce((s, x) => s + x.stayMinutes, 0);
-  const growable = () => stops.filter((x) => x.stayMinutes < items[x.itemIndex].stay.preferred);
-  while (spare > 1e-9 && growable().length) {
-    const g = growable();
-    const share = spare / g.length;
-    for (const x of g) {
-      const add = Math.min(share, items[x.itemIndex].stay.preferred - x.stayMinutes);
-      x.stayMinutes += add;
-      spare -= add;
-    }
-  }
-  for (const x of stops) x.stayMinutes = Math.floor(x.stayMinutes + 1e-9);
-  const staysShortened = stops.some((x) => x.stayMinutes < items[x.itemIndex].stay.preferred);
-  const stayMinutes = stops.reduce((s, x) => s + x.stayMinutes, 0);
-
-  // Why items are short.
-  const missing: PlanResult["missing"] = [];
-  items.forEach((it, i) => {
-    const got = stops.filter((x) => x.itemIndex === i).length;
-    if (got >= it.count) return;
-    let reason: SkipReason;
-    if (candidates[i].length === 0) reason = "no_candidates";
-    else if (candidates[i].every((c) => c.isOpen && !c.isOpen(minutes[0][c.point], it.stay.min))) reason = "closed";
-    else if (!it.required && optionalRejectedByDetour.has(i)) reason = "optional_too_far";
-    else reason = "over_budget";
-    missing.push({ itemIndex: i, missing: it.count - got, reason });
-  });
-
-  return { stops, walkMinutes: walk, stayMinutes, totalMinutes: walk + stayMinutes, staysShortened, missing, approximate, truncated };
-}
-
-function lexLess(a: number[], b: number[]): boolean {
-  for (let i = 0; i < a.length; i++) {
-    if (Math.abs(a[i] - b[i]) > 1e-9) return a[i] < b[i];
-  }
-  return false;
+  return finishPlan(input, slots, chosen?.route ?? [], { approximate, truncated, optionalRejectedByDetour });
 }
