@@ -67,7 +67,8 @@ Response:
       "itemId": "i1", "label": "Museum",
       "name": "Muzeul de Artă", "lat": 46.77, "lng": 23.59,
       "source": "google",                 // "google" | "osm" | "both"
-      "rating": 4.6,                       // or null
+      "rating": 4.6,                       // Google's rating as shown to people, or null
+      "ratingCount": 1303,                 // number of Google reviews behind it, or null
       "address": "Piața Unirii 30",       // or null
       "wishConfirmed": "modern",          // the item's wish when this place was confirmed to fit it, else null
       "stayMinutes": 52,

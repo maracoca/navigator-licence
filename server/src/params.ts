@@ -103,6 +103,16 @@ export const PARAMS = {
     "assumed",
     "An optional ('if there's one along the way') stop may add at most this much walking.",
   ),
+  ratingPriorMean: p(
+    4.35,
+    "sourced",
+    "Average Google rating of places in the city (measured: 1,375 rated places from the app's Google searches in Cluj, 2026-11-18). A rating from few reviews is pulled towards it; a place without a rating counts as exactly this.",
+  ),
+  ratingPriorReviews: p(
+    50,
+    "assumed",
+    "How many reviews it takes before a place's own rating counts as much as the city average (the 'm' of a Bayesian average, as in IMDb's published Top 250 formula). The median place in Cluj has about 60 reviews.",
+  ),
   ratingTiebreakMinutesPerStar: p(
     1,
     "assumed",

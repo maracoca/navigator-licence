@@ -554,3 +554,77 @@ limit of 7 stops (`maxSlots`) is conservative. Heuristics stay in the low millis
   random problems, not on the city problems without ratings. Fixing it remains an open decision.
 - Limits of this run: city problems have no ratings or opening hours; above 3 stops the reference is the exact planner
   itself, so its own misses there cannot be seen; 5 problems per size for the run-time curve.
+
+---
+
+## E17 — Planner benchmark on problems built by the app itself (2026-11-17)
+
+**What:** the realistic part of the benchmark now builds every problem with the app's own code (`preparePlan`, shared
+with `planWalk`): OSM + Google places, the same merge and shortlist, Google ratings and opening hours checked at the
+departure time, real street walking times. 25 start/end pairs × 6 requests = 150 problems (seed 11; 1–6 stops; departures
+Mon 09:00, Wed 14:00, Fri 18:30, Sat 21:00, Sun 11:00). Google was searched 271 times (limit 400); the answers are saved,
+so re-runs are free and identical. The 31 dev plans are unchanged by the code split.
+Results: `eval/planner-runs/2026-11-17_17-40-36_planner.md` (+ `_planner.json`, `_problems.json`). Parts 1 and 3 as in E16.
+
+**App-built problems** (reference: brute force up to 3 stops, the exact planner above)
+| Stops | Problems | exact worse | greedy worse | insertion worse | local search worse |
+|---|---|---|---|---|---|
+| 1 | 31 | 0 | 61 % | 36 % | 0 |
+| 2 | 27 | **26 %** (7) | 89 % | 59 % | 26 % |
+| 3 | 18 | **28 %** (5) | 100 % | 72 % | 33 % |
+| 4 | 18 | (= reference) | 89 % | 83 % | 61 % |
+| 5 | 24 | (= reference) | 96 % | 67 % | 38 % |
+| 6 | 32 | (= reference) | 97 % | 81 % | 63 % |
+Greedy typically costs 6–8 extra minutes, insertion 3–7, local search 2–4; all three sometimes cover fewer stops.
+
+**Why the exact planner misses here** (the 76 problems with 1–3 stops, rules switched off one at a time):
+| Switched off | exact worse than brute force |
+|---|---|
+| nothing | 12 |
+| rating tie-break | 2 |
+| rating tie-break + opening hours | **0** |
+| opening hours only | 17 |
+63 % of candidates have a Google rating and 59 % have opening hours, so — unlike the random problems — both rules are
+active in almost every real request. The dynamic program keeps only the fastest path to each state: a slightly slower
+but better-rated path is lost (rating), and so is a later arrival that would find a place open (opening hours: the app
+never waits for a place to open, so arriving earlier is not always better).
+
+**Takeaway:** on realistic problems the "exact" planner is not exact in about a quarter of 2–3-stop requests, by the
+app's own scoring. It is still far better than greedy and cheapest insertion and on par with or better than local search.
+Fixing it (keeping more than the fastest path per state, and deciding whether waiting for a place to open is allowed)
+is now clearly worth doing; the benchmark can measure the result and the extra run time.
+
+---
+
+## E18 — Ratings adjusted for the number of reviews (2026-11-18)
+
+**Why:** 22 % of rated Google places in Cluj have fewer than 10 reviews, and 150 of the 1,375 rated places are rated
+4.8–5.0 from so few (e.g. parcel lockers, "5★ from 1 review"). Such ratings beat well-proven places (4.5★ from 1,300
+reviews). Also, a place without a rating counted as 0 stars, so every rated place — even a 4.0 — was treated as about
+4 minutes "closer" than an unrated (often OSM-only) one.
+
+**Change:** a Bayesian average, the form IMDb published for its Top 250 list:
+adjusted = (reviews × rating + m × average) / (reviews + m), with average = 4.35 (measured mean of the 1,375 rated places)
+and m = 50 reviews (assumed; the median place has about 60). A place without a rating counts as exactly average.
+Used in the planner's tie-break and in the "best-rated" half of the shortlist. Google's review count was already
+being received; it is now kept and shown in the app ("★ 4.5 (1,303)"). The Wilson score (Evan Miller, *How Not To Sort
+By Average Rating*) was considered but needs the full distribution of ratings, which Google does not provide.
+5 new unit tests; 47 tests pass.
+
+**Effect on the dev set** (replayed, no new calls; `eval/runs/2026-11-18_13-25-06_dev.json`): 11 of 31 plans changed,
+mostly to closer places without a Google rating (e.g. dev-13 bakery + library: 23 → 20 min walking) and away from
+low-rated ones (dev-25: a 2.5★ WC no longer wins just for having a rating). Mean walk / shortest walk 1.67 → 1.63.
+Understanding scores unchanged.
+
+**Effect on the planner benchmark** (same 150 app-built problems, 0 new Google searches;
+`eval/planner-runs/2026-11-18_11-26-38_planner.md`):
+| Stops | exact worse than brute force, raw ratings (E17) | adjusted ratings |
+|---|---|---|
+| 2 | 7 / 27 (26 %) | **1 / 27 (4 %)** |
+| 3 | 5 / 18 (28 %) | **2 / 18 (11 %)** |
+Greedy, insertion and local search remain clearly worse (greedy 89–94 % of problems with 2+ stops).
+Of the 3 remaining misses, 1 comes from the rating tie-break and 2 from opening hours combined with optional stops
+(the planner assumes arriving earlier is always better, but the app never waits for a place to open — see ideas).
+
+**Takeaway:** most of the planner's misses in E17 were caused by unreliable ratings, not by the search. With adjusted
+ratings the planner finds the best plan in 73 of 76 small realistic problems.

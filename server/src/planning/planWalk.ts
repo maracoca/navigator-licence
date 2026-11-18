@@ -21,8 +21,9 @@ import {
   type Path,
 } from "../routing/router.js";
 import type { Item, StreetPreference } from "../types.js";
-import { plan, type PlanCandidate, type SkipReason } from "./planner.js";
+import { plan, type PlanCandidate, type PlanInput, type SkipReason } from "./planner.js";
 import { minimumStay } from "./stays.js";
+import { adjustedRating } from "../places/rating.js";
 
 export type LocationInput = { text: string } | { lat: number; lng: number; label?: string };
 
@@ -87,7 +88,12 @@ function skipMessage(reason: SkipReason | "unreachable" | "no_match", label: str
   }
 }
 
-export async function planWalk(city: CityData, req: PlanRequest) {
+/**
+ * Everything before choosing stops: find start and end, candidate places (OSM + Google, merged and shortlisted),
+ * opening hours, and walking minutes between all points. Shared with the planner benchmark, so it plans on
+ * exactly the problems the app builds.
+ */
+export async function preparePlan(city: CityData, req: PlanRequest) {
   const budget = req.budgetMinutes != null && req.budgetMinutes > 0 ? Math.min(req.budgetMinutes, PARAMS.maxBudgetMinutes.value) : null;
   const startMs = req.departAt ? Date.parse(req.departAt) : Date.now();
   if (!Number.isFinite(startMs)) throw new UserError("departAt is not a valid date.");
@@ -113,7 +119,7 @@ export async function planWalk(city: CityData, req: PlanRequest) {
       const g = c.google;
       list.push({
         point: snaps.length - 1,
-        rating: c.rating,
+        rating: adjustedRating(c.rating, c.ratingCount),
         isOpen: g ? (arrive, stay) => openFor(g, startMs, arrive, stay) : undefined,
       });
     }
@@ -137,7 +143,7 @@ export async function planWalk(city: CityData, req: PlanRequest) {
   });
   if (!Number.isFinite(minutes[0][1])) throw new UserError("There is no walking connection between the start and the end with these street requirements.");
 
-  const result = plan({
+  const input: PlanInput = {
     items: req.items.map((it) => ({
       required: it.required,
       order: it.order,
@@ -147,7 +153,14 @@ export async function planWalk(city: CityData, req: PlanRequest) {
     candidates: planCands,
     minutes,
     budgetMinutes: budget,
-  });
+  };
+  return { budget, startMs, origin, dest, so, sd, found, snaps, pointPlace, unreachableItems, hard, input };
+}
+
+export async function planWalk(city: CityData, req: PlanRequest) {
+  const { budget, origin, dest, so, sd, found, snaps, pointPlace, unreachableItems, hard, input } = await preparePlan(city, req);
+  const graph = city.graph;
+  const result = plan(input);
 
   // Route each leg with the street preferences.
   const seq = [0, ...result.stops.map((s) => s.point), 1];
@@ -192,6 +205,7 @@ export async function planWalk(city: CityData, req: PlanRequest) {
       /** The item's wish when this place was confirmed to fit it ("modern"), otherwise null. */
       wishConfirmed: c.wish === "yes" ? item.details : null,
       rating: c.rating,
+      ratingCount: c.ratingCount,
       address: c.address,
       stayMinutes: s.stayMinutes,
       arriveMinute: Math.round(clock),

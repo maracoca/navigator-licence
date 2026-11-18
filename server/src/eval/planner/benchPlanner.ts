@@ -9,6 +9,7 @@
  * No LLM and no network. Writes eval/planner-runs/<time>_planner.json (all numbers),
  * <time>_planner.md (tables) and <time>_problems.json (the city problems, so they can be re-run).
  */
+import "dotenv/config";
 import { execSync } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -18,6 +19,7 @@ import { PARAMS } from "../../params.js";
 import { plan, type PlanInput, type PlanResult } from "../../planning/planner.js";
 import { bruteForce, cheapestInsertion, greedy, localSearch } from "../../planning/baselines.js";
 import { cityProblems, syntheticProblems, toPlanInput, type StoredProblem } from "./problems.js";
+import { appProblems } from "./appProblems.js";
 
 const ROOT = fileURLToPath(new URL("../../../../", import.meta.url));
 const OUT_DIR = path.join(ROOT, "eval", "planner-runs");
@@ -115,16 +117,22 @@ for (const p of synthetic) {
   for (const n of NAMES) addComparison(synResults[n], scoreOf(input, PLANNERS[n](input)), ref);
 }
 
-// ─── 2. Realistic problems on the city's map ────────────────────────────────
+// ─── 2. Realistic problems, built by the app's own pipeline ─────────────────
 
 const city = await loadCity(process.env.CITY?.trim() || "cluj-napoca");
 const CITY_SEED = 7;
+const APP_SEED = 11;
 const CANDIDATES = PARAMS.candidatesPerItem.value;
 const BRUTE_MAX_SLOTS = 3;
+const MAX_GOOGLE_SEARCHES = 400;
 const AREA = { south: 46.755, west: 23.56, north: 46.785, east: 23.625 };
-const perSize: Record<number, number> = quick ? { 1: 5, 2: 5, 3: 5, 4: 5, 5: 3 } : { 1: 30, 2: 30, 3: 30, 4: 30, 5: 20, 6: 20, 7: 10 };
-console.log(`2/3 City problems on ${city.config.name}: ${JSON.stringify(perSize)} (seed ${CITY_SEED}, ${CANDIDATES} candidates per item) ...`);
-const cityList = cityProblems(city, { seed: CITY_SEED, perSize, candidatesPerItem: CANDIDATES, area: AREA });
+// Monday morning, Wednesday afternoon, Friday evening, Saturday night, Sunday late morning (local time, Cluj).
+const DEPARTURES = ["2026-11-23T09:00:00+02:00", "2026-11-25T14:00:00+02:00", "2026-11-27T18:30:00+02:00", "2026-11-28T21:00:00+02:00", "2026-11-29T11:00:00+02:00"];
+const appOpts = { seed: APP_SEED, pairs: quick ? 4 : 25, perPair: quick ? 3 : 6, maxStops: 6, maxGoogleSearches: MAX_GOOGLE_SEARCHES, area: AREA, departures: DEPARTURES };
+console.log(`2/3 App-built problems on ${city.config.name}: ${appOpts.pairs} start/end pairs × ${appOpts.perPair} requests (seed ${APP_SEED}) ...`);
+const app = await appProblems(city, appOpts);
+console.log(`   ${app.problems.length} problems, ${app.googleSearchesPlanned} Google searches needed (saved after the first run), ${app.skipped} skipped (no walking connection)`);
+const cityList = app.problems;
 
 interface CityRow {
   id: string;
@@ -199,7 +207,8 @@ const meta = {
   node: process.version,
   quick,
   city: city.config.name,
-  seeds: { synthetic: SYN_SEED, city: CITY_SEED, scaling: CITY_SEED + 1 },
+  seeds: { synthetic: SYN_SEED, app: APP_SEED, scaling: CITY_SEED + 1 },
+  appProblems: { ...appOpts, googleSearchesPlanned: app.googleSearchesPlanned, skipped: app.skipped },
   candidatesPerItem: CANDIDATES,
   bruteMaxSlots: BRUTE_MAX_SLOTS,
   params: Object.fromEntries(Object.entries(PARAMS).map(([k, v]) => [k, v.value])),
@@ -218,8 +227,8 @@ for (const n of NAMES) {
   const c = synResults[n];
   md.push(`| ${n} | ${c.worse} (${pct(c.worse, c.n)}) | ${c.fewerStops} | ${fmt(median(c.extraWhenSameStops))} / ${fmt(c.extraWhenSameStops.length ? Math.max(...c.extraWhenSameStops) : null)} | ${c.better} |`);
 }
-md.push("", `## 2. City problems (${cityList.length} problems, real places and street walking times, ${CANDIDATES} candidates per item)`, "");
-md.push(`Reference = brute force up to ${BRUTE_MAX_SLOTS} stops, the exact planner above that. Ratings are not used (OSM places).`, "");
+md.push("", `## 2. App-built problems (${cityList.length} problems: the app's own place search (OSM + Google), shortlist, opening hours and street walking times; ${appOpts.pairs} start/end pairs, departures Mon 09:00, Wed 14:00, Fri 18:30, Sat 21:00, Sun 11:00)`, "");
+md.push(`Reference = brute force up to ${BRUTE_MAX_SLOTS} stops, the exact planner above that. Google ratings and opening hours are included.`, "");
 md.push("| Stops | Problems | Planner | worse than reference | fewer stops | extra min when same stops (mean) | run time ms (median) |", "|---|---|---|---|---|---|---|");
 for (const s of citySummary) {
   for (const [n, v] of Object.entries(s.per)) {

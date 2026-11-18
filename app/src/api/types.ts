@@ -97,6 +97,8 @@ export interface Stop {
   lng: number;
   source: PlaceSource;
   rating: number | null;
+  /** Number of Google reviews behind the rating. */
+  ratingCount?: number | null;
   address: string | null;
   /** The item's wish when this place was confirmed to fit it ("modern"), otherwise null. */
   wishConfirmed?: string | null;

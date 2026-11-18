@@ -12,13 +12,16 @@ import { haversineMeters } from "../routing/router.js";
 import type { Item } from "../types.js";
 import { searchPlaces, type GooglePlace } from "./google.js";
 import { checkWish, type WishFit } from "./wishCheck.js";
+import { adjustedRating } from "./rating.js";
 
 export interface Candidate {
   id: string;
   name: string;
   lat: number;
   lng: number;
+  /** Google's rating as shown to the user. */
   rating: number | null;
+  ratingCount: number | null;
   address: string | null;
   source: "google" | "osm" | "both";
   google: GooglePlace | null;
@@ -93,7 +96,9 @@ export function choosePool(all: Candidate[], detour: (p: Point) => number): Cand
   const byRating = Math.min(PARAMS.candidatesByRating.value, total);
   const near = [...all].sort((a, b) => detour(a) - detour(b));
   const picked = new Set(near.slice(0, total - byRating));
-  const rated = all.filter((c) => c.rating != null && !picked.has(c)).sort((a, b) => b.rating! - a.rating! || detour(a) - detour(b));
+  // Best-rated by the adjusted rating, so a 5-star place with one review does not outrank a well-proven one.
+  const adj = (c: Candidate) => adjustedRating(c.rating, c.ratingCount);
+  const rated = all.filter((c) => c.rating != null && !picked.has(c)).sort((a, b) => adj(b) - adj(a) || detour(a) - detour(b));
   for (const c of rated.slice(0, byRating)) picked.add(c);
   for (const c of near) {
     if (picked.size >= total) break;
@@ -137,14 +142,14 @@ export async function findCandidates(
         );
         if (twin) mergedOsm.add(twin.id);
         out.push({
-          id: g.id, name: g.name, lat: g.lat, lng: g.lng, rating: g.rating, address: g.address,
+          id: g.id, name: g.name, lat: g.lat, lng: g.lng, rating: g.rating, ratingCount: g.ratingCount, address: g.address,
           source: twin ? "both" : "google", google: g, osmTags: twin?.tags ?? null, wish: null,
         });
       }
       for (const o of osm) {
         if (mergedOsm.has(o.id)) continue;
         const label = o.name ?? item.osm.find((k) => Object.entries(k.tags).every(([kk, v]) => v === "*" || o.tags[kk] === v))?.name ?? item.label;
-        out.push({ id: o.id, name: label, lat: o.lat, lng: o.lng, rating: null, address: null, source: "osm", google: null, osmTags: o.tags, wish: null });
+        out.push({ id: o.id, name: label, lat: o.lat, lng: o.lng, rating: null, ratingCount: null, address: null, source: "osm", google: null, osmTags: o.tags, wish: null });
       }
 
       if (!hasWish || out.length === 0) return { candidates: choosePool(out, detour), cityCount, wishStatus: "none" as const };

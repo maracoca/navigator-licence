@@ -51,7 +51,9 @@ export function ResultScreen(props: { plan: PlanResponse; onEdit: () => void; on
               <Text style={styles.stopName}>{s.name}</Text>
               <Text style={styles.muted}>
                 {s.label} · arrive at +{minutes(s.arriveMinute)} · stay {minutes(s.stayMinutes)}
-                {s.rating !== null ? ` · ★ ${s.rating.toFixed(1)}` : ''}
+                {s.rating !== null
+                  ? ` · ★ ${s.rating.toFixed(1)}${s.ratingCount ? ` (${s.ratingCount.toLocaleString('en')})` : ''}`
+                  : ''}
               </Text>
               {s.wishConfirmed ? <Text style={styles.wish}>✓ {s.wishConfirmed}</Text> : null}
               {s.address ? <Text style={styles.muted}>{s.address}</Text> : null}

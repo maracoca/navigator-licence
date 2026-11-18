@@ -32,6 +32,8 @@ export interface GooglePlace {
   lat: number;
   lng: number;
   rating: number | null;
+  /** Number of Google reviews behind the rating. */
+  ratingCount: number | null;
   address: string | null;
   types: string[];
   /** null = hours unknown. */
@@ -45,6 +47,7 @@ interface RawPlace {
   displayName?: { text?: string };
   location?: { latitude?: number; longitude?: number };
   rating?: number;
+  userRatingCount?: number;
   formattedAddress?: string;
   shortFormattedAddress?: string;
   types?: string[];
@@ -84,6 +87,7 @@ function toPlace(p: RawPlace): GooglePlace | null {
     lat: p.location.latitude,
     lng: p.location.longitude,
     rating: p.rating ?? null,
+    ratingCount: p.userRatingCount ?? null,
     address: p.shortFormattedAddress ?? p.formattedAddress ?? null,
     types: [...new Set([p.primaryType, ...(p.types ?? [])].filter((t): t is string => !!t))],
     periods: p.regularOpeningHours?.periods ?? null,

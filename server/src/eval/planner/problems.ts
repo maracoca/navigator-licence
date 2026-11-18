@@ -10,6 +10,7 @@ import type { CityData, OsmPlace } from "../../data/cityTypes.js";
 import { metersPerMinute, PARAMS } from "../../params.js";
 import type { PlanInput } from "../../planning/planner.js";
 import { costModel, haversineMeters, shortestTree } from "../../routing/router.js";
+import { openFor, type GooglePlace, type OpeningPeriod } from "../../places/google.js";
 
 /** Small, fast, seedable random numbers (mulberry32). */
 export function rng(seed: number): () => number {
@@ -28,9 +29,23 @@ export interface StoredProblem {
   /** Requested stops (counting "two of" as two). */
   slots: number;
   items: Array<PlanInput["items"][number] & { kind: string }>;
-  candidates: Array<Array<{ point: number; rating: number | null; window: [number, number] | null; name?: string }>>;
+  candidates: Array<
+    Array<{
+      point: number;
+      rating: number | null;
+      window: [number, number] | null;
+      name?: string;
+      source?: string;
+      /** Google opening hours, checked against `departMs` like the app does. */
+      hours?: { periods: OpeningPeriod[]; utcOffsetMinutes: number } | null;
+    }>
+  >;
   minutes: number[][];
   budgetMinutes: number | null;
+  /** Departure time (ms since 1970), for opening hours. */
+  departMs?: number;
+  /** Where the problem came from (start, end, request), for reading the results. */
+  about?: Record<string, unknown>;
 }
 
 export function toPlanInput(p: StoredProblem): PlanInput {
@@ -40,7 +55,11 @@ export function toPlanInput(p: StoredProblem): PlanInput {
       cs.map((c) => ({
         point: c.point,
         rating: c.rating,
-        isOpen: c.window ? (arrive: number, stay: number) => arrive >= c.window![0] && arrive + stay <= c.window![1] : undefined,
+        isOpen: c.hours
+          ? (arrive: number, stay: number) => openFor(c.hours as unknown as GooglePlace, p.departMs ?? 0, arrive, stay)
+          : c.window
+            ? (arrive: number, stay: number) => arrive >= c.window![0] && arrive + stay <= c.window![1]
+            : undefined,
       })),
     ),
     minutes: p.minutes,
@@ -85,7 +104,7 @@ export function syntheticProblems(seed: number, count: number): StoredProblem[] 
 // ─── Realistic problems on the city's map ───────────────────────────────────
 
 /** Common kinds of place, with the typical stay class used by the app (stays.ts). */
-const KINDS: Array<{ kind: string; tags: Record<string, string>; stay: number }> = [
+export const KINDS: Array<{ kind: string; tags: Record<string, string>; stay: number }> = [
   { kind: "cafe", tags: { amenity: "cafe" }, stay: PARAMS.stayMediumMinutes.value },
   { kind: "pharmacy", tags: { amenity: "pharmacy" }, stay: PARAMS.stayShortMinutes.value },
   { kind: "bakery", tags: { shop: "bakery" }, stay: PARAMS.stayShortMinutes.value },
@@ -119,7 +138,6 @@ export function cityProblems(city: CityData, opts: CityProblemOptions): StoredPr
   const plain = costModel(g, [], 1);
   const mpm = metersPerMinute();
   const pools = KINDS.map((k) => ({ ...k, places: city.placesMatching(k.tags) })).filter((k) => k.places.length >= opts.candidatesPerItem);
-  const pick = <T>(xs: T[]): T => xs[Math.floor(r() * xs.length)];
   const randomPoint = () => ({
     lat: opts.area.south + r() * (opts.area.north - opts.area.south),
     lng: opts.area.west + r() * (opts.area.east - opts.area.west),
