@@ -14,6 +14,7 @@ import {
   hasSoftPreference,
   haversineMeters,
   pathPoints,
+  pathTo,
   shortestTree,
   walkLeg,
   type Coverage,
@@ -93,7 +94,17 @@ function skipMessage(reason: SkipReason | "unreachable" | "no_match", label: str
  * opening hours, and walking minutes between all points. Shared with the planner benchmark, so it plans on
  * exactly the problems the app builds.
  */
-export async function preparePlan(city: CityData, req: PlanRequest) {
+export interface PlanOptions {
+  /**
+   * How "prefer" street preferences are used:
+   *  separate  stops are chosen on plain walking times (+ a reserve), preferences shape each leg afterwards;
+   *  joint     the walking table is built from preference-shaped routes, so stops are chosen by how the walk "feels"
+   *            (good streets shorter, bad ones longer) while the budget uses the real minutes of those routes.
+   */
+  streetMode?: "separate" | "joint";
+}
+
+export async function preparePlan(city: CityData, req: PlanRequest, options: PlanOptions = {}) {
   const budget = req.budgetMinutes != null && req.budgetMinutes > 0 ? Math.min(req.budgetMinutes, PARAMS.maxBudgetMinutes.value) : null;
   const startMs = req.departAt ? Date.parse(req.departAt) : Date.now();
   if (!Number.isFinite(startMs)) throw new UserError("departAt is not a valid date.");
@@ -127,19 +138,36 @@ export async function preparePlan(city: CityData, req: PlanRequest) {
     return list;
   });
 
-  // Walking minutes between all points, using only the hard street requirements.
   const graph = city.graph;
   const hard = costModel(graph, req.street, 1);
   const soft = hasSoftPreference(req.street);
-  const reserve = soft ? 1 + PARAMS.preferenceMaxExtraPercent.value / 100 : 1;
+  const joint = soft && options.streetMode === "joint";
+  // Joint: one preference strength for the whole request; legs later follow the same routes.
+  const prefModel = joint ? costModel(graph, req.street, PARAMS.jointPreferenceStrength.value) : null;
+  const reserve = soft && !joint ? 1 + PARAMS.preferenceMaxExtraPercent.value / 100 : 1;
   const nodes = snaps.map((s) => s.node);
-  const minutes = snaps.map((from, a) => {
-    const tree = shortestTree(graph, hard, from.node, nodes);
-    return snaps.map((to, b) => {
-      if (a === b) return 0;
-      const m = tree.meters[to.node];
-      return Number.isFinite(m) ? minutesFor(m * reserve + from.snapMeters + to.snapMeters) : Infinity;
-    });
+  const minutes: number[][] = [];
+  const costMinutes: number[][] = [];
+  snaps.forEach((from, a) => {
+    // Separate: real minutes of the shortest walk allowed by the hard requirements (+ reserve for preferences).
+    // Joint: real minutes and "felt" minutes of the preference-shaped walk.
+    const tree = shortestTree(graph, prefModel ?? hard, from.node, nodes);
+    minutes.push(
+      snaps.map((to, b) => {
+        if (a === b) return 0;
+        const m = tree.meters[to.node];
+        return Number.isFinite(m) ? minutesFor(m * reserve + from.snapMeters + to.snapMeters) : Infinity;
+      }),
+    );
+    if (joint) {
+      costMinutes.push(
+        snaps.map((to, b) => {
+          if (a === b) return 0;
+          const c = tree.cost[to.node];
+          return Number.isFinite(c) ? minutesFor(c + from.snapMeters + to.snapMeters) : Infinity;
+        }),
+      );
+    }
   });
   if (!Number.isFinite(minutes[0][1])) throw new UserError("There is no walking connection between the start and the end with these street requirements.");
 
@@ -152,13 +180,14 @@ export async function preparePlan(city: CityData, req: PlanRequest) {
     })),
     candidates: planCands,
     minutes,
+    costMinutes: joint ? costMinutes : undefined,
     budgetMinutes: budget,
   };
-  return { budget, startMs, origin, dest, so, sd, found, snaps, pointPlace, unreachableItems, hard, input };
+  return { budget, startMs, origin, dest, so, sd, found, snaps, pointPlace, unreachableItems, hard, prefModel, input };
 }
 
-export async function planWalk(city: CityData, req: PlanRequest) {
-  const { budget, origin, dest, so, sd, found, snaps, pointPlace, unreachableItems, hard, input } = await preparePlan(city, req);
+export async function planWalk(city: CityData, req: PlanRequest, options: PlanOptions = {}) {
+  const { budget, origin, dest, so, sd, found, snaps, pointPlace, unreachableItems, hard, prefModel, input } = await preparePlan(city, req, options);
   const graph = city.graph;
   const result = plan(input);
 
@@ -168,7 +197,9 @@ export async function planWalk(city: CityData, req: PlanRequest) {
   const legs: Array<{ points: LatLng[]; meters: number; minutes: number }> = [];
   for (let k = 0; k + 1 < seq.length; k++) {
     const a = snaps[seq[k]], b = snaps[seq[k + 1]];
-    const leg = walkLeg(graph, req.street, a.node, b.node, hard);
+    // Joint: follow the same preference-shaped routes the stops were chosen on. Separate: the 12 % rule per leg.
+    const jointPath = prefModel ? pathTo(shortestTree(graph, prefModel, a.node, [b.node]), b.node) : null;
+    const leg = prefModel ? (jointPath ? { path: jointPath } : null) : walkLeg(graph, req.street, a.node, b.node, hard);
     if (!leg) throw new Error("A planned leg has no route");
     paths.push(leg.path);
     const meters = leg.path.meters + a.snapMeters + b.snapMeters;

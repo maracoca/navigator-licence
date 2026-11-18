@@ -20,6 +20,9 @@ import { plan, type PlanInput, type PlanResult } from "../../planning/planner.js
 import { bruteForce, cheapestInsertion, greedy, localSearch } from "../../planning/baselines.js";
 import { cityProblems, syntheticProblems, toPlanInput, type StoredProblem } from "./problems.js";
 import { appProblems } from "./appProblems.js";
+import { planWalk } from "../../planning/planWalk.js";
+import { rng } from "./problems.js";
+import { STREET_PROPERTIES, type StreetPropertyId } from "../../routing/streetProperties.js";
 
 const ROOT = fileURLToPath(new URL("../../../../", import.meta.url));
 const OUT_DIR = path.join(ROOT, "eval", "planner-runs");
@@ -108,7 +111,7 @@ function git(): { commit: string | null; dirty: boolean } {
 
 const SYN_SEED = 42;
 const SYN_COUNT = quick ? 300 : 3000;
-console.log(`1/3 Small random problems: ${SYN_COUNT} (seed ${SYN_SEED}) vs brute force ...`);
+console.log(`1/4 Small random problems: ${SYN_COUNT} (seed ${SYN_SEED}) vs brute force ...`);
 const synthetic = syntheticProblems(SYN_SEED, SYN_COUNT);
 const synResults: Record<string, Comparison> = Object.fromEntries(NAMES.map((n) => [n, emptyComparison()]));
 for (const p of synthetic) {
@@ -129,7 +132,7 @@ const AREA = { south: 46.755, west: 23.56, north: 46.785, east: 23.625 };
 // Monday morning, Wednesday afternoon, Friday evening, Saturday night, Sunday late morning (local time, Cluj).
 const DEPARTURES = ["2026-11-23T09:00:00+02:00", "2026-11-25T14:00:00+02:00", "2026-11-27T18:30:00+02:00", "2026-11-28T21:00:00+02:00", "2026-11-29T11:00:00+02:00"];
 const appOpts = { seed: APP_SEED, pairs: quick ? 4 : 25, perPair: quick ? 3 : 6, maxStops: 6, maxGoogleSearches: MAX_GOOGLE_SEARCHES, area: AREA, departures: DEPARTURES };
-console.log(`2/3 App-built problems on ${city.config.name}: ${appOpts.pairs} start/end pairs × ${appOpts.perPair} requests (seed ${APP_SEED}) ...`);
+console.log(`2/4 App-built problems on ${city.config.name}: ${appOpts.pairs} start/end pairs × ${appOpts.perPair} requests (seed ${APP_SEED}) ...`);
 const app = await appProblems(city, appOpts);
 console.log(`   ${app.problems.length} problems, ${app.googleSearchesPlanned} Google searches needed (saved after the first run), ${app.skipped} skipped (no walking connection)`);
 const cityList = app.problems;
@@ -177,7 +180,7 @@ const citySummary = sizes.map((slots) => {
 
 const SCALE_MAX = quick ? 8 : 10;
 const scalePerSize = quick ? 2 : 5;
-console.log(`3/3 Run time for 1..${SCALE_MAX} stops (${scalePerSize} problems each) ...`);
+console.log(`3/4 Run time for 1..${SCALE_MAX} stops (${scalePerSize} problems each) ...`);
 const savedMaxSlots = PARAMS.maxSlots.value;
 (PARAMS.maxSlots as { value: number }).value = SCALE_MAX;
 const scaleProblems = cityProblems(city, {
@@ -198,6 +201,60 @@ const scaling = Array.from({ length: SCALE_MAX }, (_, i) => i + 1).map((slots) =
 });
 (PARAMS.maxSlots as { value: number }).value = savedMaxSlots;
 
+// ─── 4. Street preferences: separate vs joint ───────────────────────────────
+
+// The same app-built requests, each with one "prefer" street preference; planned by the whole app pipeline in both modes.
+// Street preferences do not change the Google searches, so this needs no new ones.
+const STREET_SEED = 21;
+const PROPS: StreetPropertyId[] = ["lit", "quiet", "sidewalk", "paved"];
+console.log(`4/4 Street preferences, separate vs joint: ${app.requests.length} requests (seed ${STREET_SEED}) ...`);
+const sr = rng(STREET_SEED);
+interface StreetRow {
+  id: string;
+  property: StreetPropertyId;
+  stopsChanged: boolean;
+  sep: { stops: number; walk: number; good: number; bad: number; unknown: number; within: boolean; ms: number };
+  joint: { stops: number; walk: number; good: number; bad: number; unknown: number; within: boolean; ms: number };
+}
+const streetRows: StreetRow[] = [];
+for (const [i, base0] of app.requests.entries()) {
+  const property = PROPS[Math.floor(sr() * PROPS.length)];
+  const label = STREET_PROPERTIES.find((p) => p.id === property)!.label;
+  const req = { ...base0, street: [{ property, label, mode: "prefer" as const }] };
+  const run = async (streetMode: "separate" | "joint") => {
+    const t = performance.now();
+    const r = await planWalk(city, req, { streetMode });
+    const ms = performance.now() - t;
+    const c = r.coverage[0];
+    return {
+      names: r.stops.map((s) => s.name).join(" | "),
+      row: { stops: r.stops.length, walk: r.totals.walkMinutes, good: c?.goodPercent ?? 0, bad: c?.badPercent ?? 0, unknown: c?.unknownPercent ?? 0, within: r.totals.withinBudget, ms },
+    };
+  };
+  try {
+    const s = await run("separate");
+    const j = await run("joint");
+    streetRows.push({ id: app.problems[i].id, property, stopsChanged: s.names !== j.names, sep: s.row, joint: j.row });
+  } catch (e) {
+    console.log(`   ${app.problems[i].id}: ${(e as Error).message}`);
+  }
+}
+const streetSummary = ["all", ...PROPS].map((prop) => {
+  const rows = streetRows.filter((r) => prop === "all" || r.property === prop);
+  const m = (f: (r: StreetRow) => number) => mean(rows.map(f));
+  return {
+    property: prop,
+    n: rows.length,
+    stopsChanged: rows.filter((r) => r.stopsChanged).length,
+    goodSep: m((r) => r.sep.good), goodJoint: m((r) => r.joint.good),
+    badSep: m((r) => r.sep.bad), badJoint: m((r) => r.joint.bad),
+    walkSep: m((r) => r.sep.walk), walkJoint: m((r) => r.joint.walk),
+    stopsSep: m((r) => r.sep.stops), stopsJoint: m((r) => r.joint.stops),
+    withinSep: rows.filter((r) => r.sep.within).length, withinJoint: rows.filter((r) => r.joint.within).length,
+    msSep: median(rows.map((r) => r.sep.ms)), msJoint: median(rows.map((r) => r.joint.ms)),
+  };
+});
+
 // ─── Write results ──────────────────────────────────────────────────────────
 
 const stamp = new Date().toISOString().slice(0, 19).replace("T", "_").replace(/:/g, "-");
@@ -216,7 +273,7 @@ const meta = {
 await mkdir(OUT_DIR, { recursive: true });
 const base = path.join(OUT_DIR, `${stamp}`);
 await writeFile(`${base}_problems.json`, JSON.stringify({ meta, problems: cityList }));
-await writeFile(`${base}_planner.json`, JSON.stringify({ meta, synthetic: synResults, city: { rows: cityRows, summary: citySummary }, scaling }, null, 1));
+await writeFile(`${base}_planner.json`, JSON.stringify({ meta, synthetic: synResults, city: { rows: cityRows, summary: citySummary }, scaling, streets: { seed: STREET_SEED, rows: streetRows, summary: streetSummary } }, null, 1));
 
 const md: string[] = [];
 md.push(`# Planner study — ${meta.date.slice(0, 10)}`, "");
@@ -238,6 +295,12 @@ for (const s of citySummary) {
 md.push("", `## 3. Run time as the number of stops grows (${scalePerSize} city problems per size, ${CANDIDATES} candidates per item)`, "");
 md.push(`| Stops | ${NAMES.map((n) => `${n} ms (median)`).join(" | ")} |`, `|---|${NAMES.map(() => "---").join("|")}|`);
 for (const s of scaling) md.push(`| ${s.slots} | ${NAMES.map((n) => fmt(median(s.ms[n]), 3)).join(" | ")} |`);
+md.push("", `## 4. Street preferences: separate vs joint (${streetRows.length} app-built requests, one "prefer" street preference each, seed ${STREET_SEED}; joint strength ${PARAMS.jointPreferenceStrength.value})`, "");
+md.push("Separate: stops chosen on plain walking times, the preference shapes each leg afterwards (12 % rule). Joint: stops and legs chosen on preference-shaped routes. Good / bad = share of the walk on streets with a good / bad value for the requested property.", "");
+md.push("| Preference | Requests | stops changed | good % sep → joint | bad % sep → joint | walk min sep → joint | stops sep → joint | within budget sep / joint | run time ms sep → joint (median) |", "|---|---|---|---|---|---|---|---|---|");
+for (const s of streetSummary) {
+  md.push(`| ${s.property} | ${s.n} | ${s.stopsChanged} (${pct(s.stopsChanged, s.n)}) | ${fmt(s.goodSep, 1)} → ${fmt(s.goodJoint, 1)} | ${fmt(s.badSep, 1)} → ${fmt(s.badJoint, 1)} | ${fmt(s.walkSep, 1)} → ${fmt(s.walkJoint, 1)} | ${fmt(s.stopsSep)} → ${fmt(s.stopsJoint)} | ${s.withinSep} / ${s.withinJoint} | ${fmt(s.msSep, 0)} → ${fmt(s.msJoint, 0)} |`);
+}
 await writeFile(`${base}_planner.md`, md.join("\n") + "\n");
 
 console.log(`\nSaved ${path.relative(ROOT, base)}_planner.md, _planner.json, _problems.json`);

@@ -628,3 +628,50 @@ Of the 3 remaining misses, 1 comes from the rating tie-break and 2 from opening 
 
 **Takeaway:** most of the planner's misses in E17 were caused by unreliable ratings, not by the search. With adjusted
 ratings the planner finds the best plan in 73 of 76 small realistic problems.
+
+---
+
+## E19 — Exact planner fixed; street preferences separate vs joint (2026-11-18)
+
+**Planner fix.** The dynamic program now keeps, for each step ("these stops done, standing here"), every way there that
+no other way beats on both time (for the budget) and score (walking — preference-weighted when given — minus the rating
+bonus), instead of only the fastest; an optional stop's detour is checked as soon as the next place is chosen, and ways
+are only compared with ways that share the place before an optional stop. Safety limit: 50 ways per step
+(`maxStatesPerStep`). New tests: with one of each item the planner equals brute force on 400 random problems (ratings,
+optional stops and opening hours on); a slower but better-rated way is not lost. 48 tests pass. Dev set: 2 of 31 plans
+changed (same walking, better-rated or reordered).
+
+**Joint street preferences (option).** `planWalk(..., { streetMode: "joint" })`: the walking table is built from
+preference-shaped routes at one strength (`jointPreferenceStrength` = 0.7, assumed: good streets count 0.7 of their
+length, bad ones 1/0.7); stops are chosen by how the walk "feels", the budget uses those routes' real minutes, and the
+legs follow the same routes. The default ("separate") is unchanged: plain walking times + 12 % reserve, preferences shape
+each leg afterwards.
+
+**Run:** `eval/planner-runs/2026-11-18_11-58-06_planner.md` (0 new Google searches).
+
+*Exactness (brute force)*
+| Problems | before the fix (E18) | after |
+|---|---|---|
+| 3,000 random | 172 (5.7 %) | **5 (0.2 %)** — all with "two of the same item" |
+| 76 app-built, 1–3 stops | 3 | **0** |
+
+*Run time of the exact planner* (median ms, 5 problems per size): 3 stops 0.25, 6 stops 4.3, 7 stops 57, 9 stops 305,
+10 stops 593 — roughly twice as slow as before for large requests, still under 0.1 s up to 8 stops.
+
+*Separate vs joint* (150 app-built requests, each with one "prefer" street preference, seed 21)
+| Preference | n | stops changed | good % sep → joint | bad % sep → joint | walk min sep → joint | stops sep → joint |
+|---|---|---|---|---|---|---|
+| all | 150 | 60 (40 %) | 75.4 → **78.5** | 1.9 → **1.0** | 35.2 → 35.7 | 2.93 → 3.01 |
+| lit | 37 | 19 | 32.4 → 36.2 | 0 → 0 | 34.4 → 35.4 | 2.68 → 2.81 |
+| quiet | 44 | 18 | 78.8 → 85.5 | 5.4 → 2.6 | 36.2 → 37.1 | 3.09 → 3.14 |
+| sidewalk | 36 | 11 | 95.7 → 96.9 | 1.3 → 0.9 | 35.6 → 35.1 | 2.92 → 3.00 |
+| paved | 33 | 12 | 96.8 → 96.7 | 0.2 → 0.2 | 34.5 → 34.7 | 3.00 → 3.09 |
+All 150 plans within budget in both modes; run time about the same (≈ 0.28 s median; one route search per point either way).
+
+**Takeaways**
+- With the fix the planner is exact on every realistic problem tested; the only known gap is "two of the same item".
+- Joint mode changes the chosen stops in 40 % of requests and gives a better walk for the preference (more good streets,
+  half the bad ones), for about half a minute more walking on average — and slightly *more* stops, because it no longer
+  holds back a fixed 12 % of the budget for the preference. Largest gain for "quiet" (+6.7 points good, bad halved);
+  none for "paved", which is already ~97 % good.
+- `jointPreferenceStrength` (0.7) is an assumption; the sensitivity check (next) should vary it.

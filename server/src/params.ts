@@ -44,6 +44,12 @@ export const PARAMS = {
     "How many preference strengths are tried per walk when looking for the strongest one that stays within the allowed extra length.",
   ),
 
+  jointPreferenceStrength: p(
+    0.7,
+    "assumed",
+    "In the joint street-preference mode, a good street counts as this fraction of its length (a bad one as length / this) when choosing stops and routes. The middle of the strengths the separate mode tries (0.5-1). Varied in the evaluation.",
+  ),
+
   // ── Finding places ───────────────────────────────────────────────────────
   searchSlackMeters: p(
     1000,
@@ -117,6 +123,11 @@ export const PARAMS = {
     1,
     "assumed",
     "Between otherwise equal plans, one more star of rating is worth this many walking minutes.",
+  ),
+  maxStatesPerStep: p(
+    50,
+    "cost-limit",
+    "Most ways the exact planner keeps for one step (stops done + where you stand) that are not beaten on both time and score. A safety limit for very large requests; when it is reached the plan is marked as possibly not the best.",
   ),
   maxSlots: p(7, "cost-limit", "Most stops searched exactly. Larger requests keep the first items and say so."),
   maxCountPerItem: p(5, "cost-limit", "Most stops for one item ('five museums')."),

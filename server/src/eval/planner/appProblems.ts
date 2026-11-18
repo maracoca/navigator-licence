@@ -5,7 +5,7 @@
  */
 import type { CityData } from "../../data/cityTypes.js";
 import { metersPerMinute, PARAMS } from "../../params.js";
-import { preparePlan } from "../../planning/planWalk.js";
+import { preparePlan, type PlanRequest } from "../../planning/planWalk.js";
 import { haversineMeters } from "../../routing/router.js";
 import type { Item } from "../../types.js";
 import { KINDS, rng, type StoredProblem } from "./problems.js";
@@ -49,7 +49,7 @@ type Kind = (typeof KINDS)[number];
 export async function appProblems(
   city: CityData,
   opts: AppProblemOptions,
-): Promise<{ problems: StoredProblem[]; googleSearchesPlanned: number; skipped: number }> {
+): Promise<{ problems: StoredProblem[]; requests: PlanRequest[]; googleSearchesPlanned: number; skipped: number }> {
   const r = rng(opts.seed);
   const mpm = metersPerMinute();
   const g = city.graph;
@@ -112,19 +112,22 @@ export async function appProblems(
   }
 
   const problems: StoredProblem[] = [];
+  /** The request behind each problem (same order), for runs that go through the whole app pipeline. */
+  const requests: PlanRequest[] = [];
   let skipped = 0;
   for (const [n, pl] of plans.entries()) {
     const pair = pairs[pl.pair];
+    const request: PlanRequest = {
+      origin: { lat: pair.a.lat, lng: pair.a.lng, label: "start" },
+      destination: { lat: pair.b.lat, lng: pair.b.lng, label: "end" },
+      budgetMinutes: pair.budget,
+      departAt: pl.departAt,
+      items: pl.items,
+      street: [],
+    };
     let prep: Awaited<ReturnType<typeof preparePlan>>;
     try {
-      prep = await preparePlan(city, {
-        origin: { lat: pair.a.lat, lng: pair.a.lng, label: "start" },
-        destination: { lat: pair.b.lat, lng: pair.b.lng, label: "end" },
-        budgetMinutes: pair.budget,
-        departAt: pl.departAt,
-        items: pl.items,
-        street: [],
-      });
+      prep = await preparePlan(city, request);
     } catch {
       skipped++;
       continue;
@@ -160,6 +163,7 @@ export async function appProblems(
         candidatesFound: found.map((f) => f.candidates.length),
       },
     });
+    requests.push(request);
   }
-  return { problems, googleSearchesPlanned: searches.size, skipped };
+  return { problems, requests, googleSearchesPlanned: searches.size, skipped };
 }

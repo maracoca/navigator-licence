@@ -40,18 +40,32 @@ test("every planner keeps the time budget", () => {
   }
 });
 
-test("without the rating tie-break, optional stops and repeated items, the exact planner always finds the best plan", () => {
-  const saved = PARAMS.ratingTiebreakMinutesPerStar.value;
-  (PARAMS.ratingTiebreakMinutesPerStar as { value: number }).value = 0;
-  try {
-    for (const input of problems) {
-      for (const it of input.items) {
-        it.required = true;
-        it.count = 1;
-      }
-      assert.equal(compare(scoreOf(input, plan(input)), scoreOf(input, bruteForce(input))), 0);
-    }
-  } finally {
-    (PARAMS.ratingTiebreakMinutesPerStar as { value: number }).value = saved;
+test("with one of each item, the exact planner always finds the best plan (ratings, optional stops and opening hours included)", () => {
+  for (const input of syntheticProblems(99, 400).map(toPlanInput)) {
+    for (const it of input.items) it.count = 1;
+    assert.equal(compare(scoreOf(input, plan(input)), scoreOf(input, bruteForce(input))), 0);
   }
+});
+
+test("a slightly slower but better-rated way to the same step is not lost", () => {
+  // start (0) → cafe A or cafe B → pharmacy (4) → end (1). A is 1 min quicker, B is rated 2 stars higher.
+  const minutes = [
+    [0, 30, 5, 6, 99],
+    [30, 0, 99, 99, 10],
+    [5, 99, 0, 99, 10],
+    [6, 99, 99, 0, 10],
+    [99, 10, 10, 10, 0],
+  ];
+  const input: PlanInput = {
+    items: [
+      { required: true, order: 1, count: 1, stay: { preferred: 5, min: 5 } },
+      { required: true, order: 2, count: 1, stay: { preferred: 5, min: 5 } },
+    ],
+    candidates: [[{ point: 2, rating: 2 }, { point: 3, rating: 4 }], [{ point: 4, rating: null }]],
+    minutes,
+    budgetMinutes: null,
+  };
+  const res = plan(input);
+  assert.equal(res.stops[0].point, 3);
+  assert.equal(compare(scoreOf(input, res), scoreOf(input, bruteForce(input))), 0);
 });

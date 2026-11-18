@@ -61,8 +61,10 @@ export function checkRoute(input: PlanInput, slots: Slot[], route: RouteStop[]):
   const seenSlots = new Set<number>();
   const seenPoints = new Set<number>();
   let maxOrder = -Infinity;
+  const cost = input.costMinutes ?? minutes;
   let time = 0;
   let walk = 0;
+  let felt = 0;
   let here = 0;
   for (const s of route) {
     const slot = slots[s.slot];
@@ -83,12 +85,14 @@ export function checkRoute(input: PlanInput, slots: Slot[], route: RouteStop[]):
     if (cand.isOpen && !cand.isOpen(arrive, item.stay.min)) return invalid();
     time = arrive + item.stay.min;
     walk += leg;
+    felt += cost[here][p];
     here = p;
   }
   const toEnd = minutes[here][1];
   if (!Number.isFinite(toEnd)) return invalid();
   time += toEnd;
   walk += toEnd;
+  felt += cost[here][1];
   if (time > budget + 1e-9) return invalid(walk);
 
   const pts = [0, ...route.map((s) => pointOf(input, slots, s)), 1];
@@ -102,7 +106,8 @@ export function checkRoute(input: PlanInput, slots: Slot[], route: RouteStop[]):
 
   const req = route.filter((s) => slots[s.slot].required).length;
   const rating = route.reduce((sum, s) => sum + (candidates[slots[s.slot].item][s.cand].rating ?? 0), 0);
-  const score = [-req, -(route.length - req), walk - rating * PARAMS.ratingTiebreakMinutesPerStar.value];
+  // Judged by the walk as it "feels" with street preferences when given, else by real walking minutes.
+  const score = [-req, -(route.length - req), felt - rating * PARAMS.ratingTiebreakMinutesPerStar.value];
   return { valid: true, walk, time, score, detourBroken: [] };
 }
 

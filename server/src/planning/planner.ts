@@ -14,12 +14,18 @@
  *  - A place is used once; a place must be open for the whole stay when its
  *    hours are known.
  *
- * Search: dynamic programming over (set of filled slots, last place), keeping
- * the quickest way to reach each state. Exact when every item has count 1;
- * with counts above 1 a place already used on the stored best path is skipped,
- * which can in rare cases miss the optimum (reported as `approximate`). A request with more
- * stops than `maxSlots` is planned on its first stops (reported as `truncated`).
+ * Search: dynamic programming over (set of filled slots, last place). For each
+ * such step it keeps every way there that no other way beats on both time
+ * (walking + stays, for the budget) and score (walking — preference-weighted
+ * when given — minus the rating bonus): a "label" method from constrained
+ * shortest-path search. Known gaps, measured by the planner benchmark against
+ * brute force: an optional stop's detour depends on the next stop, which is not
+ * known when ways are compared; with counts above 1 the stored way decides
+ * which places are used (reported as `approximate`); a place must be open on
+ * arrival (no waiting), so arriving earlier is not always better. A request
+ * with more stops than `maxSlots` is planned on its first stops (`truncated`).
  */
+import { PARAMS } from "../params.js";
 import { buildSlots, checkRoute, finishPlan, lexLess, type RouteStop } from "./routeRules.js";
 
 export interface PlanItem {
@@ -41,8 +47,13 @@ export interface PlanInput {
   items: PlanItem[];
   /** candidates[i] = places for items[i]. */
   candidates: PlanCandidate[][];
-  /** Walking minutes; point 0 = start, point 1 = end. */
+  /** Walking minutes; point 0 = start, point 1 = end. Decide the time budget. */
   minutes: number[][];
+  /**
+   * Optional: the minutes a walk "feels like" with the street preferences (good streets count shorter, bad ones longer).
+   * When given, plans are judged by these instead of real walking minutes; the budget still uses `minutes`.
+   */
+  costMinutes?: number[][];
   budgetMinutes: number | null;
 }
 
@@ -71,12 +82,21 @@ export interface PlanResult {
 interface State {
   mask: number;
   point: number;
-  /** Walking + minimum stays so far. */
+  /** Walking + minimum stays so far (real minutes; decides the budget). */
   time: number;
   walk: number;
+  /** What the plan is judged by so far: walking (preference-weighted when given) minus the rating bonus. */
+  obj: number;
   slot: number;
   cand: number;
   prev: State | null;
+  /** Replaced by a state that is at least as good on both time and obj. */
+  dead?: boolean;
+  /**
+   * When the last stop is optional, the place before it: that stop's detour is only known once the next place is
+   * chosen, so ways are compared only with ways that share it. -1 otherwise.
+   */
+  ctx: number;
 }
 
 function pathOf(s: State): State[] {
@@ -94,15 +114,43 @@ export function plan(input: PlanInput): PlanResult {
   const S = slots.length;
   const slotIndex = new Map(slots.map((s, i) => [`${s.item}:${s.copy}`, i]));
 
-  const start: State = { mask: 0, point: 0, time: 0, walk: 0, slot: -1, cand: -1, prev: null };
-  const best = new Map<string, State>([["0:0", start]]);
+  const cost = input.costMinutes ?? minutes;
+  const tiebreak = PARAMS.ratingTiebreakMinutesPerStar.value;
+  const maxLabels = PARAMS.maxStatesPerStep.value;
+  let capped = false;
+
+  const start: State = { mask: 0, point: 0, time: 0, walk: 0, obj: 0, slot: -1, cand: -1, prev: null, ctx: -1 };
+  const detourCap = PARAMS.optionalMaxDetourMinutes.value;
+  // Per step ("these stops done, standing here"): every way there that no other way beats on both time and obj.
+  // Keeping only the fastest would lose a slower way that is better rated or uses preferred streets.
+  const labels = new Map<string, State[]>([["0:0", [start]]]);
   const byMask: State[][] = Array.from({ length: 1 << S }, () => []);
   byMask[0].push(start);
+
+  const add = (next: State): void => {
+    const key = `${next.mask}:${next.point}`;
+    const list = labels.get(key) ?? [];
+    for (const l of list) if (l.ctx === next.ctx && l.time <= next.time + 1e-9 && l.obj <= next.obj + 1e-9) return;
+    const kept = list.filter((l) => {
+      const beaten = l.ctx === next.ctx && next.time <= l.time + 1e-9 && next.obj <= l.obj + 1e-9;
+      if (beaten) l.dead = true;
+      return !beaten;
+    });
+    kept.push(next);
+    if (kept.length > maxLabels) {
+      // Safety valve against very large requests: keep the best-judged ones and say the plan may not be the best.
+      kept.sort((a, b) => a.obj - b.obj);
+      for (const l of kept.splice(maxLabels)) l.dead = true;
+      capped = true;
+    }
+    labels.set(key, kept);
+    byMask[next.mask].push(next);
+  };
 
   // Masks in increasing order: every transition adds a bit, so predecessors come first.
   for (let mask = 0; mask < 1 << S; mask++) {
     for (const st of byMask[mask]) {
-      if (best.get(`${mask}:${st.point}`) !== st) continue;
+      if (st.dead) continue;
       const used = new Set(pathOf(st).map((x) => x.point));
       for (let s = 0; s < S; s++) {
         if (mask & (1 << s)) continue;
@@ -128,13 +176,11 @@ export function plan(input: PlanInput): PlanResult {
           if (cand.isOpen && !cand.isOpen(arrive, it.stay.min)) return;
           const time = arrive + it.stay.min;
           if (time + minutes[cand.point][1] > budget) return;
-          const nmask = mask | (1 << s);
-          const key = `${nmask}:${cand.point}`;
-          const prev = best.get(key);
-          if (prev && prev.time <= time) return;
-          const next: State = { mask: nmask, point: cand.point, time, walk: st.walk + leg, slot: s, cand: ci, prev: st };
-          best.set(key, next);
-          byMask[nmask].push(next);
+          // The previous stop's detour is known now: if it was optional, it may add at most detourCap of walking.
+          if (st.ctx >= 0 && minutes[st.ctx][st.point] + leg - minutes[st.ctx][cand.point] > detourCap + 1e-9) return;
+          const obj = st.obj + cost[st.point][cand.point] - (cand.rating ?? 0) * tiebreak;
+          const ctx = slot.required ? -1 : st.point;
+          add({ mask: mask | (1 << s), point: cand.point, time, walk: st.walk + leg, obj, slot: s, cand: ci, prev: st, ctx });
         });
       }
     }
@@ -143,7 +189,8 @@ export function plan(input: PlanInput): PlanResult {
   // Pick the best finished plan, judged by the shared rules (routeRules.ts).
   let chosen: { route: RouteStop[]; score: number[] } | null = null;
   const optionalRejectedByDetour = new Set<number>();
-  for (const st of best.values()) {
+  for (const st of [...labels.values()].flat()) {
+    if (st.dead) continue;
     const route = pathOf(st).map((x) => ({ slot: x.slot, cand: x.cand }));
     const check = checkRoute(input, slots, route);
     for (const i of check.detourBroken) optionalRejectedByDetour.add(i);
@@ -151,5 +198,5 @@ export function plan(input: PlanInput): PlanResult {
     if (!chosen || lexLess(check.score, chosen.score)) chosen = { route, score: check.score };
   }
 
-  return finishPlan(input, slots, chosen?.route ?? [], { approximate, truncated, optionalRejectedByDetour });
+  return finishPlan(input, slots, chosen?.route ?? [], { approximate: approximate || capped, truncated, optionalRejectedByDetour });
 }
