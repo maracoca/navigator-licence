@@ -91,13 +91,13 @@ export function googleText(item: Item, type: string): string {
 }
 
 /** Some candidates closest to the route, some best-rated within reach. */
-export function choosePool(all: Candidate[], detour: (p: Point) => number): Candidate[] {
+export function choosePool(all: Candidate[], detour: (p: Point) => number, ratingMean?: number): Candidate[] {
   const total = PARAMS.candidatesPerItem.value;
   const byRating = Math.min(PARAMS.candidatesByRating.value, total);
   const near = [...all].sort((a, b) => detour(a) - detour(b));
   const picked = new Set(near.slice(0, total - byRating));
   // Best-rated by the adjusted rating, so a 5-star place with one review does not outrank a well-proven one.
-  const adj = (c: Candidate) => adjustedRating(c.rating, c.ratingCount);
+  const adj = (c: Candidate) => adjustedRating(c.rating, c.ratingCount, ratingMean);
   const rated = all.filter((c) => c.rating != null && !picked.has(c)).sort((a, b) => adj(b) - adj(a) || detour(a) - detour(b));
   for (const c of rated.slice(0, byRating)) picked.add(c);
   for (const c of near) {
@@ -152,7 +152,7 @@ export async function findCandidates(
         out.push({ id: o.id, name: label, lat: o.lat, lng: o.lng, rating: null, ratingCount: null, address: null, source: "osm", google: null, osmTags: o.tags, wish: null });
       }
 
-      if (!hasWish || out.length === 0) return { candidates: choosePool(out, detour), cityCount, wishStatus: "none" as const };
+      if (!hasWish || out.length === 0) return { candidates: choosePool(out, detour, city.config.ratingMean), cityCount, wishStatus: "none" as const };
 
       // Check the places closest to the route against the wish.
       const nearest = [...out].sort((a, b) => detour(a) - detour(b)).slice(0, PARAMS.wishCheckMaxCandidates.value);
@@ -169,8 +169,8 @@ export async function findCandidates(
       for (const c of nearest) c.wish = fits.get(c.id) ?? "unknown";
       const yes = nearest.filter((c) => c.wish === "yes");
       const maybe = nearest.filter((c) => c.wish === "unknown");
-      if (yes.length) return { candidates: choosePool(yes, detour), cityCount, wishStatus: "confirmed" as const };
-      if (maybe.length) return { candidates: choosePool(maybe, detour), cityCount, wishStatus: "unconfirmed" as const };
+      if (yes.length) return { candidates: choosePool(yes, detour, city.config.ratingMean), cityCount, wishStatus: "confirmed" as const };
+      if (maybe.length) return { candidates: choosePool(maybe, detour, city.config.ratingMean), cityCount, wishStatus: "unconfirmed" as const };
       return { candidates: [], cityCount, wishStatus: "no_match" as const };
     }),
   );

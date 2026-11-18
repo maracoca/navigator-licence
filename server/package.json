@@ -14,7 +14,8 @@
     "eval:check": "tsx src/eval/runEval.ts --check",
     "report:street-tags": "tsx src/data/streetTagReport.ts",
     "report:street-tags-world": "tsx src/data/worldStreetTags.ts",
-    "bench:planner": "tsx src/eval/planner/benchPlanner.ts"
+    "bench:planner": "tsx src/eval/planner/benchPlanner.ts",
+    "report:ratings": "tsx src/eval/ratingMean.ts"
   },
   "dependencies": {
     "@openstreetmap/id-tagging-schema": "^7.3.0",

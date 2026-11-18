@@ -19,6 +19,10 @@ export interface CityConfig {
   /** Geofabrik (or similar) .osm.pbf that contains the city. */
   extractUrl: string;
   bbox: BBox;
+  /** Average Google rating of places in this city (for adjusted ratings); params.ratingPriorMean when missing. */
+  ratingMean?: number;
+  /** Where the planner benchmark draws starts and ends; the central part of bbox when missing. */
+  benchArea?: BBox;
 }
 
 /**

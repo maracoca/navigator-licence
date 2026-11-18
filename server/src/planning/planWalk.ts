@@ -104,6 +104,12 @@ export interface PlanOptions {
   streetMode?: "separate" | "joint";
 }
 
+/**
+ * The app's default: joint. Measured in three cities (experiments E19, E20): more of the walk on good streets, about half
+ * the bad ones, slightly more stops, 0.2-0.5 min more walking, same run time.
+ */
+export const DEFAULT_STREET_MODE: NonNullable<PlanOptions["streetMode"]> = "joint";
+
 export async function preparePlan(city: CityData, req: PlanRequest, options: PlanOptions = {}) {
   const budget = req.budgetMinutes != null && req.budgetMinutes > 0 ? Math.min(req.budgetMinutes, PARAMS.maxBudgetMinutes.value) : null;
   const startMs = req.departAt ? Date.parse(req.departAt) : Date.now();
@@ -130,7 +136,7 @@ export async function preparePlan(city: CityData, req: PlanRequest, options: Pla
       const g = c.google;
       list.push({
         point: snaps.length - 1,
-        rating: adjustedRating(c.rating, c.ratingCount),
+        rating: adjustedRating(c.rating, c.ratingCount, city.config.ratingMean),
         isOpen: g ? (arrive, stay) => openFor(g, startMs, arrive, stay) : undefined,
       });
     }
@@ -141,7 +147,7 @@ export async function preparePlan(city: CityData, req: PlanRequest, options: Pla
   const graph = city.graph;
   const hard = costModel(graph, req.street, 1);
   const soft = hasSoftPreference(req.street);
-  const joint = soft && options.streetMode === "joint";
+  const joint = soft && (options.streetMode ?? DEFAULT_STREET_MODE) === "joint";
   // Joint: one preference strength for the whole request; legs later follow the same routes.
   const prefModel = joint ? costModel(graph, req.street, PARAMS.jointPreferenceStrength.value) : null;
   const reserve = soft && !joint ? 1 + PARAMS.preferenceMaxExtraPercent.value / 100 : 1;

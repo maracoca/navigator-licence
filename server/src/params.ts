@@ -112,7 +112,7 @@ export const PARAMS = {
   ratingPriorMean: p(
     4.35,
     "sourced",
-    "Average Google rating of places in the city (measured: 1,375 rated places from the app's Google searches in Cluj, 2026-11-18). A rating from few reviews is pulled towards it; a place without a rating counts as exactly this.",
+    "Average Google rating of places (measured: 1,375 rated places from the app's Google searches in Cluj, 2026-11-18). Fallback when a city has no ratingMean of its own in cities.json. A rating from few reviews is pulled towards it; a place without a rating counts as exactly this.",
   ),
   ratingPriorReviews: p(
     50,

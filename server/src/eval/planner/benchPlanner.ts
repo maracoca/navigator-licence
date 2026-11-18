@@ -27,6 +27,10 @@ import { STREET_PROPERTIES, type StreetPropertyId } from "../../routing/streetPr
 const ROOT = fileURLToPath(new URL("../../../../", import.meta.url));
 const OUT_DIR = path.join(ROOT, "eval", "planner-runs");
 const quick = process.argv.includes("--quick");
+const argValue = (name: string): string | undefined => {
+  const i = process.argv.indexOf(name);
+  return i >= 0 ? process.argv[i + 1] : undefined;
+};
 
 const PLANNERS: Record<string, (p: PlanInput) => PlanResult> = {
   exact: plan,
@@ -128,10 +132,14 @@ const APP_SEED = 11;
 const CANDIDATES = PARAMS.candidatesPerItem.value;
 const BRUTE_MAX_SLOTS = 3;
 const MAX_GOOGLE_SEARCHES = 400;
-const AREA = { south: 46.755, west: 23.56, north: 46.785, east: 23.625 };
+// Starts and ends are drawn from the central part of the city's map area (15 % margin on each side).
+const bb = city.config.bbox;
+const marginLat = (bb.north - bb.south) * 0.15, marginLng = (bb.east - bb.west) * 0.15;
+const AREA = city.config.benchArea ?? { south: bb.south + marginLat, west: bb.west + marginLng, north: bb.north - marginLat, east: bb.east - marginLng };
+const PAIRS = Number(argValue("--pairs") ?? 25);
 // Monday morning, Wednesday afternoon, Friday evening, Saturday night, Sunday late morning (local time, Cluj).
 const DEPARTURES = ["2026-11-23T09:00:00+02:00", "2026-11-25T14:00:00+02:00", "2026-11-27T18:30:00+02:00", "2026-11-28T21:00:00+02:00", "2026-11-29T11:00:00+02:00"];
-const appOpts = { seed: APP_SEED, pairs: quick ? 4 : 25, perPair: quick ? 3 : 6, maxStops: 6, maxGoogleSearches: MAX_GOOGLE_SEARCHES, area: AREA, departures: DEPARTURES };
+const appOpts = { seed: APP_SEED, pairs: quick ? 4 : PAIRS, perPair: quick ? 3 : 6, maxStops: 6, maxGoogleSearches: MAX_GOOGLE_SEARCHES, area: AREA, departures: DEPARTURES };
 console.log(`2/4 App-built problems on ${city.config.name}: ${appOpts.pairs} start/end pairs × ${appOpts.perPair} requests (seed ${APP_SEED}) ...`);
 const app = await appProblems(city, appOpts);
 console.log(`   ${app.problems.length} problems, ${app.googleSearchesPlanned} Google searches needed (saved after the first run), ${app.skipped} skipped (no walking connection)`);
@@ -271,7 +279,7 @@ const meta = {
   params: Object.fromEntries(Object.entries(PARAMS).map(([k, v]) => [k, v.value])),
 };
 await mkdir(OUT_DIR, { recursive: true });
-const base = path.join(OUT_DIR, `${stamp}`);
+const base = path.join(OUT_DIR, `${stamp}_${city.config.id}`);
 await writeFile(`${base}_problems.json`, JSON.stringify({ meta, problems: cityList }));
 await writeFile(`${base}_planner.json`, JSON.stringify({ meta, synthetic: synResults, city: { rows: cityRows, summary: citySummary }, scaling, streets: { seed: STREET_SEED, rows: streetRows, summary: streetSummary } }, null, 1));
 

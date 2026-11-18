@@ -675,3 +675,74 @@ All 150 plans within budget in both modes; run time about the same (≈ 0.28 s m
   holds back a fixed 12 % of the budget for the preference. Largest gain for "quiet" (+6.7 points good, bad halved);
   none for "paved", which is already ~97 % good.
 - `jointPreferenceStrength` (0.7) is an assumption; the sensitivity check (next) should vary it.
+
+**Decision on the app default (separate or joint):** postponed until the Berlin and Paris results (E20). Until then the app keeps the separate mode.
+
+---
+
+## E20 — Three cities: Cluj-Napoca, Berlin, Paris (2026-11-18)
+
+**Why:** everything so far was measured in one city, where few streets carry the tags the street preferences need
+(lit on 11 % of street length). Two cities with much better mapped streets were added to test whether the results hold,
+and whether joint planning helps more where the data is richer.
+
+**Choosing the cities (by data, before downloading):** share of highway ways with each key, from Geofabrik's regional
+taginfo (2026-11-17): Romania lit 5 % / sidewalk 6 %; **Berlin 63 % / 37 %**; Hamburg 64 % / 23 %; Île-de-France 27 % / 20 %;
+Denmark 25 % / 5 %; Austria, Switzerland, Netherlands, Mazowieckie, Czechia, Hungary, Finland 10–15 % / 3–12 %.
+Chosen: Berlin (high) and Paris (Île-de-France extract, medium-high) next to Cluj (low).
+
+**Setup:** central areas of about 10 × 12 km (Berlin 52.475–52.565 N, 13.29–13.47 E; Paris 48.815–48.905 N, 2.25–2.42 E),
+added to `cities.json` and built with the same command (Berlin extract 95 MB, Île-de-France 324 MB).
+| | Cluj-Napoca | Berlin | Paris |
+|---|---|---|---|
+| Walkable ways | 1,428 km | 5,544 km | 7,423 km |
+| Street points | 67,069 | 304,642 | 473,674 |
+| Places | 23,169 | 357,927 | 336,489 (mostly trees, lamps, kerbs, bollards) |
+| Load time | 0.3 s | 3.4 s | 4.3 s |
+| lit: good / bad / unknown | 10 / 2 / 89 % | 73 / 11 / 17 % | 72 / 3 / 25 % |
+| paved | 50 / 12 / 39 % | 81 / 11 / 9 % | 76 / 4 / 21 % |
+| quiet | 78 / 12 / 11 % | 58 / 10 / 32 % | 45 / 9 / 46 % |
+| sidewalk | 64 / 10 / 26 % | 67 / 13 / 20 % | 76 / 15 / 10 % |
+| Average Google rating (`report:ratings`) | 4.35 (median 61 reviews) | 4.21 (175) | 4.15 (268) |
+("quiet" is less known in Berlin and Paris because sidewalks there are mapped as their own paths, and OSM does not record
+which road a separate sidewalk runs beside.)
+Code changes: each city can set its own average rating (`ratingMean`) and benchmark area (`benchArea`; Cluj keeps its
+original one so its problems are unchanged); the benchmark takes `--pairs`, and result files carry the city name.
+
+**Runs:** 15 start/end pairs × 6 requests = 90 app-built problems per city, same seeds as Cluj. Google: 165 searches per
+city (330 total), all saved. First runs used Cluj's average rating (kept in `eval/planner-runs/superseded/`); final runs with
+each city's own average needed 0 new searches: `eval/planner-runs/2026-11-18_15-27-03_berlin_planner.md`,
+`2026-11-18_15-49-09_paris_planner.md` (Cluj: `2026-11-18_11-58-06_planner.md`, E19).
+
+**Planners** (app-built problems; reference brute force up to 3 stops, exact planner above)
+| | Cluj | Berlin | Paris |
+|---|---|---|---|
+| exact worse than brute force (1–3 stops) | 0 / 76 | 0 / 51 | 0 / 51 |
+| greedy worse, 2–6 stops | 89–96 % | 81–100 % | 87–100 % |
+| local search worse, 2–6 stops | 11–84 % | 6–63 % | 6–56 % |
+
+**Street preferences, separate → joint** (all requests with one "prefer" preference)
+| | Cluj (150) | Berlin (90) | Paris (90) |
+|---|---|---|---|
+| stops changed | 40 % | 37 % | 40 % |
+| good streets | 75.4 → **78.5 %** | 89.6 → **91.4 %** | 92.5 → **93.8 %** |
+| bad streets | 1.9 → **1.0 %** | 2.1 → **1.6 %** | 0.5 → **0.4 %** |
+| walking (min) | 35.2 → 35.7 | 34.6 → 34.8 | 31.4 → 31.6 |
+| stops in the plan | 2.93 → 3.01 | 2.96 → 3.00 | 3.09 → 3.14 |
+| within budget | all | all | all |
+| lit only: good streets | 32.4 → 36.2 % | 92.8 → 94.0 % | 95.7 → 97.0 % |
+| run time (median) | 0.28 s | 2.1 s | 3.8 s |
+
+**Takeaways**
+- The planner results hold in all three cities: the exact planner found the best plan in every small problem (178 in total),
+  greedy is worse in nearly every problem with 2+ stops, local search in about half.
+- Joint planning helps in every city: more good streets, fewer bad ones, slightly more stops, about 0.2–0.5 min more walking.
+- The expected "bigger gain where data is richer" did **not** appear. In Berlin and Paris the separate mode already walks
+  ~90 % on good streets, so there is little left to gain; the largest gain is in Cluj, where the data is thin and choosing
+  the stops matters most. (A ceiling effect, not a contradiction.)
+- New finding: planning takes 2–4 s per request in Berlin and Paris (the street graphs are 5–7 times larger, and one route
+  search runs from every candidate). Fine for a prototype; a faster route search would be needed for a real app.
+
+**Decision (owner, 2026-11-18): the app now uses the joint mode by default** (`DEFAULT_STREET_MODE` in `planWalk.ts`).
+Dev set replayed (`eval/runs/2026-11-18_18-05-36_dev.json`): 1 of 31 plans changed (dev-31: a different pharmacy, same
+walking, 100 % on streets with sidewalks either way); understanding scores unchanged.

@@ -3,6 +3,22 @@
     "id": "cluj-napoca",
     "name": "Cluj-Napoca",
     "extractUrl": "https://download.geofabrik.de/europe/romania-latest.osm.pbf",
-    "bbox": { "south": 46.73, "west": 23.52, "north": 46.80, "east": 23.68 }
+    "bbox": { "south": 46.73, "west": 23.52, "north": 46.80, "east": 23.68 },
+    "ratingMean": 4.35,
+    "benchArea": { "south": 46.755, "west": 23.56, "north": 46.785, "east": 23.625 }
+  },
+  {
+    "id": "berlin",
+    "name": "Berlin",
+    "extractUrl": "https://download.geofabrik.de/europe/germany/berlin-latest.osm.pbf",
+    "bbox": { "south": 52.475, "west": 13.29, "north": 52.565, "east": 13.47 },
+    "ratingMean": 4.21
+  },
+  {
+    "id": "paris",
+    "name": "Paris",
+    "extractUrl": "https://download.geofabrik.de/europe/france/ile-de-france-latest.osm.pbf",
+    "bbox": { "south": 48.815, "west": 2.25, "north": 48.905, "east": 2.42 },
+    "ratingMean": 4.15
   }
 ]

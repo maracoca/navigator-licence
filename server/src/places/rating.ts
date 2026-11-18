@@ -7,8 +7,8 @@
  */
 import { PARAMS } from "../params.js";
 
-export function adjustedRating(rating: number | null, reviews: number | null): number {
-  const mean = PARAMS.ratingPriorMean.value;
+export function adjustedRating(rating: number | null, reviews: number | null, cityMean?: number): number {
+  const mean = cityMean ?? PARAMS.ratingPriorMean.value;
   if (rating == null) return mean;
   const n = Math.max(0, reviews ?? 0);
   const m = PARAMS.ratingPriorReviews.value;
