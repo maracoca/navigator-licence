@@ -25,6 +25,7 @@ import type { Item, StreetPreference } from "../types.js";
 import { plan, type PlanCandidate, type PlanInput, type SkipReason } from "./planner.js";
 import { minimumStay } from "./stays.js";
 import { adjustedRating } from "../places/rating.js";
+import { questionRules, streetQuestions } from "../osm/streetQuestions.js";
 
 export type LocationInput = { text: string } | { lat: number; lng: number; label?: string };
 
@@ -298,5 +299,7 @@ export async function planWalk(city: CityData, req: PlanRequest, options: PlanOp
     coverage: cov,
     skipped,
     notices,
+    /** Streets on this walk the app may ask about (unknown lighting), and how to ask. */
+    questions: { rules: questionRules(), streets: streetQuestions(graph, paths) },
   };
 }

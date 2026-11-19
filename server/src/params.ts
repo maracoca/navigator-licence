@@ -129,6 +129,31 @@ export const PARAMS = {
     "cost-limit",
     "Most ways the exact planner keeps for one step (stops done + where you stand) that are not beaten on both time and score. A safety limit for very large requests; when it is reached the plan is marked as possibly not the best.",
   ),
+  // ── Street questions during the walk (OSM users) ─────────────────────────
+  questionMinWayMeters: p(
+    50,
+    "assumed",
+    "A street is asked about only if the walk follows it for at least this long, so one answer covers a useful stretch.",
+  ),
+  questionCandidates: p(
+    10,
+    "cost-limit",
+    "Most streets sent with a plan as possible questions (longest first); the app asks only a few of them.",
+  ),
+  questionMaxPerWalk: p(3, "assumed", "Most questions asked during one walk."),
+  questionMinGapSeconds: p(180, "assumed", "Least time between two questions during a walk."),
+  questionShowSeconds: p(10, "assumed", "A question disappears on its own after this long (no answer = skipped), like Waze's pop-ups."),
+  questionMinWalkedMeters: p(
+    30,
+    "assumed",
+    "The user must have walked at least this far along a street (by GPS) before being asked about it.",
+  ),
+  questionNearWayMeters: p(
+    25,
+    "assumed",
+    "A GPS position counts as 'on the street' within this distance of it (phone GPS is often 5-10 m off, more between buildings).",
+  ),
+
   maxSlots: p(7, "cost-limit", "Most stops searched exactly. Larger requests keep the first items and say so."),
   maxCountPerItem: p(5, "cost-limit", "Most stops for one item ('five museums')."),
   maxBudgetMinutes: p(600, "cost-limit", "Longest time budget accepted."),
