@@ -43,6 +43,8 @@ export interface StreetGraph {
   /** index into tagSets: the edge's street tags (only STREET_TAG_KEYS). */
   edgeTagSet: Int32Array; // [edgeCount]
   tagSets: Array<Record<string, string>>;
+  /** OSM id of the way each edge comes from; missing in cities built before way ids were stored. */
+  edgeWayId?: Float64Array; // [edgeCount]
   /** Nearest graph node within maxMeters, or -1. */
   nearestNode(lat: number, lng: number, maxMeters: number): number;
 }

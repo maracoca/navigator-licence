@@ -102,6 +102,7 @@ async function build(id: string) {
   const edgeB: number[] = [];
   const edgeLen: number[] = [];
   const edgeTag: number[] = [];
+  const edgeWay: number[] = [];
   const tagSets: Tags[] = [];
   const tagSetIndex = new Map<string, number>();
   let streetWays = 0;
@@ -173,6 +174,7 @@ async function build(id: string) {
           edgeB.push(b);
           edgeLen.push(haversineMeters(nodeLat[a], nodeLng[a], nodeLat[b], nodeLng[b]));
           edgeTag.push(ts);
+          edgeWay.push(item.id);
         }
       }
 
@@ -251,6 +253,7 @@ async function build(id: string) {
     edgeB: Int32Array.from(keptEdges, (e) => remap[edgeB[e]]),
     edgeLength: Float32Array.from(keptEdges, (e) => edgeLen[e]),
     edgeTagSet: Int32Array.from(keptEdges, (e) => edgeTag[e]),
+    edgeWayId: Float64Array.from(keptEdges, (e) => edgeWay[e]),
   };
 
   // Drop tag sets no kept edge uses and renumber the rest.

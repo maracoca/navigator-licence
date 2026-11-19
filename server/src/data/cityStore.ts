@@ -3,7 +3,8 @@
  *
  * On-disk format, in data/cities/<id>/:
  *   meta.json    counts, tag sets, the byte layout of graph.bin, build stats
- *   graph.bin    little-endian typed arrays back to back (see GRAPH_ARRAYS);
+ *   graph.bin    little-endian typed arrays back to back (see GRAPH_ARRAYS;
+ *                edgeWayId may be missing in older builds);
  *                edges are stored once as (edgeA, edgeB) and the CSR adjacency
  *                is rebuilt at load, which is cheap and halves the file
  *   places.json  OsmPlace[] without `name` (it is tags.name)
@@ -30,6 +31,8 @@ export const GRAPH_ARRAYS = [
   { name: "edgeB", type: "i32", per: "edge" },
   { name: "edgeLength", type: "f32", per: "edge" },
   { name: "edgeTagSet", type: "i32", per: "edge" },
+  // OSM way ids exceed the Int32 range in places, so float64 (exact for integers up to 2^53).
+  { name: "edgeWayId", type: "f64", per: "edge" },
 ] as const;
 
 export interface CityMeta {
@@ -50,6 +53,7 @@ export interface GraphArrays {
   edgeB: Int32Array;
   edgeLength: Float32Array;
   edgeTagSet: Int32Array;
+  edgeWayId?: Float64Array;
   tagSets: Array<Record<string, string>>;
 }
 
@@ -84,6 +88,7 @@ export async function loadCity(id: string): Promise<CityData> {
     edgeB: arrays.edgeB as Int32Array,
     edgeLength: arrays.edgeLength as Float32Array,
     edgeTagSet: arrays.edgeTagSet as Int32Array,
+    edgeWayId: arrays.edgeWayId as Float64Array | undefined,
     tagSets: meta.tagSets,
   });
   const stored: StoredPlace[] = JSON.parse(placesText);
@@ -127,6 +132,7 @@ export function buildStreetGraph(g: GraphArrays): StreetGraph {
     adjEdge,
     edgeLength: g.edgeLength,
     edgeTagSet: g.edgeTagSet,
+    edgeWayId: g.edgeWayId,
     tagSets: g.tagSets,
     nearestNode: (lat, lng, maxMeters) => grid.nearest(lat, lng, maxMeters),
   };
