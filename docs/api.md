@@ -89,7 +89,14 @@ Response:
       "message": "Skipped the bench: every option adds more than 5 minutes of walking.",
       "cityCount": 40 }                    // OSM places of this kind mapped in the whole city, or null
   ],
-  "notices": []
+  "notices": [],
+  "questions": {                         // streets of this walk the app may ask about (lighting unknown)
+    "rules": { "maxPerWalk": 3, "minGapSeconds": 180, "showSeconds": 10, "minWalkedMeters": 30, "nearWayMeters": 25 },
+    "streets": [
+      { "wayId": 13341852, "property": "lit", "name": "Strada Ilie Măcelaru", "meters": 119,
+        "segments": [[[46.768, 23.585], [46.767, 23.586]]] }   // walked parts of the OSM way, [lat, lng]
+    ]                                    // empty when the city was built without OSM way ids
+  }
 }
 ```
 
@@ -101,3 +108,25 @@ Notes:
 - Stays shortened to fit are reported only by `totals.staysShortened` (no notice).
 - `/api/plan` answers 200 even when items are skipped (they are in `skipped`). It answers 400 when the start or end cannot be found or is outside the city's map.
 - `stops` are in visiting order and `legs[k]` leads to `stops[k]` (the last leg to the end). A place appears at most once.
+
+## OpenStreetMap street questions
+
+Users logged in to OpenStreetMap are asked during the walk whether a street is lit; answers are uploaded in their
+own name (one changeset per walk) and also kept in `server/data/street-answers.jsonl`, so the next plan uses them.
+Off unless `OSM_CLIENT_ID` is set (see `server/.env.example`). `OSM_UPLOAD=on` uploads for real; otherwise a dry run
+reads the way from the live OSM API, prepares the change and writes nothing.
+
+### `GET /api/osm/config`
+`{ "enabled": false }`, or `{ "enabled": true, "server": "https://master.apis.dev.openstreetmap.org", "upload": false, "authorizeUrl": "…" }`.
+The app opens `authorizeUrl`; after approval OSM shows a code to copy (redirect `urn:ietf:wg:oauth:2.0:oob`).
+
+### `POST /api/osm/login`
+`{ "code": "…" }` → `{ "token": "…", "user": "display name" }`. The app keeps the token (secure storage) and sends it
+with answers; the server keeps no session.
+
+### `POST /api/osm/answers`
+```jsonc
+{ "token": "…", "answers": [ { "wayId": 13341852, "property": "lit", "value": "yes", "answeredAt": "2026-11-19T18:00:00Z" } ] }
+```
+→ `{ "mode": "upload" | "dry-run", "server": "…", "changesetId": 123 | null, "applied": [ …answers… ], "skipped": [ { "wayId": 1, "reason": "already recorded" } ] }`.
+A way that already has the tag is never overwritten. 401 with `"osmLogin": true` when OSM rejects the token (log in again).
