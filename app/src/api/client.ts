@@ -1,5 +1,9 @@
 import type {
   HealthResponse,
+  OsmConfig,
+  OsmLoginResponse,
+  StreetAnswer,
+  UploadResult,
   PlanRequest,
   PlanResponse,
   UnderstandRequest,
@@ -13,7 +17,10 @@ export const MOCK = process.env.EXPO_PUBLIC_MOCK === '1';
 // Planning queries several place sources and a street graph, so allow a generous wait.
 const TIMEOUT_MS = 90_000;
 
-export class ApiRequestError extends Error {}
+export class ApiRequestError extends Error {
+  /** The server says the OpenStreetMap login is no longer valid. */
+  osmLogin = false;
+}
 
 async function request<T>(method: 'GET' | 'POST', path: string, body?: unknown): Promise<T> {
   if (!API_URL) {
@@ -53,7 +60,9 @@ async function request<T>(method: 'GET' | 'POST', path: string, body?: unknown):
       data && typeof data === 'object' && typeof (data as { error?: unknown }).error === 'string'
         ? (data as { error: string }).error
         : `Server error (HTTP ${res.status}).`;
-    throw new ApiRequestError(msg);
+    const err = new ApiRequestError(msg);
+    err.osmLogin = !!(data && typeof data === 'object' && (data as { osmLogin?: unknown }).osmLogin);
+    throw err;
   }
   if (data === null) throw new ApiRequestError('The server sent an invalid response.');
   return data as T;
@@ -69,4 +78,16 @@ export function understand(body: UnderstandRequest): Promise<UnderstandResponse>
 
 export function plan(body: PlanRequest): Promise<PlanResponse> {
   return MOCK ? mockPlan(body) : request('POST', '/api/plan', body);
+}
+
+export function osmConfig(): Promise<OsmConfig> {
+  return MOCK ? Promise.resolve({ enabled: false }) : request('GET', '/api/osm/config');
+}
+
+export function osmLogin(code: string): Promise<OsmLoginResponse> {
+  return request('POST', '/api/osm/login', { code });
+}
+
+export function osmAnswers(token: string, answers: StreetAnswer[]): Promise<UploadResult> {
+  return request('POST', '/api/osm/answers', { token, answers });
 }

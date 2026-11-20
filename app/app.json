@@ -27,7 +27,9 @@
         {
           "locationWhenInUsePermission": "Your location is used as the starting point of the walk."
         }
-      ]
+      ],
+      "expo-secure-store",
+      "expo-web-browser"
     ]
   }
 }

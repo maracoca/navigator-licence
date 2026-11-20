@@ -150,4 +150,54 @@ export interface PlanResponse {
   coverage: Coverage[];
   skipped: Skipped[];
   notices: string[];
+  /** Streets on this walk whose lighting is unknown, and how to ask about them (missing in mock plans). */
+  questions?: StreetQuestions;
+}
+
+// ─── OpenStreetMap street questions ─────────────────────────────────────────
+
+export interface StreetQuestion {
+  wayId: number;
+  property: 'lit';
+  name: string | null;
+  meters: number;
+  /** Walked parts of the street, as [lat, lng] lines. */
+  segments: [number, number][][];
+}
+
+export interface QuestionRules {
+  maxPerWalk: number;
+  minGapSeconds: number;
+  showSeconds: number;
+  minWalkedMeters: number;
+  nearWayMeters: number;
+}
+
+export interface StreetQuestions {
+  rules: QuestionRules;
+  streets: StreetQuestion[];
+}
+
+export type OsmConfig =
+  | { enabled: false }
+  | { enabled: true; server: string; upload: boolean; authorizeUrl: string };
+
+export interface OsmLoginResponse {
+  token: string;
+  user: string;
+}
+
+export interface StreetAnswer {
+  wayId: number;
+  property: 'lit';
+  value: 'yes' | 'no';
+  answeredAt: string;
+}
+
+export interface UploadResult {
+  mode: 'upload' | 'dry-run';
+  server: string;
+  changesetId: number | null;
+  applied: StreetAnswer[];
+  skipped: { wayId: number; reason: string }[];
 }
