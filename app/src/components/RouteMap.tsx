@@ -4,7 +4,17 @@ import MapView, { LatLng, Marker, Polyline } from 'react-native-maps';
 import type { PlanResponse } from '../api/types';
 import { colors } from '../theme';
 
-export function RouteMap({ plan }: { plan: PlanResponse }) {
+export function RouteMap({
+  plan,
+  showUser = false,
+  highlight,
+}: {
+  plan: PlanResponse;
+  /** Show the user's position (during a walk). */
+  showUser?: boolean;
+  /** Lines to mark, e.g. the street a question is about. */
+  highlight?: [number, number][][];
+}) {
   const mapRef = useRef<MapView>(null);
 
   const allCoords = useMemo<LatLng[]>(() => {
@@ -37,7 +47,7 @@ export function RouteMap({ plan }: { plan: PlanResponse }) {
       ref={mapRef}
       style={StyleSheet.absoluteFill}
       initialRegion={initialRegion}
-      showsUserLocation={false}
+      showsUserLocation={showUser}
       onMapReady={() =>
         mapRef.current?.fitToCoordinates(allCoords, {
           edgePadding: { top: 40, right: 40, bottom: 40, left: 40 },
@@ -51,6 +61,15 @@ export function RouteMap({ plan }: { plan: PlanResponse }) {
           coordinates={leg.points.map(([lat, lng]) => ({ latitude: lat, longitude: lng }))}
           strokeColor={colors.route}
           strokeWidth={5}
+        />
+      ))}
+      {highlight?.map((line, i) => (
+        <Polyline
+          key={`hl-${i}`}
+          coordinates={line.map(([lat, lng]) => ({ latitude: lat, longitude: lng }))}
+          strokeColor={colors.warn}
+          strokeWidth={8}
+          zIndex={2}
         />
       ))}
       <Marker

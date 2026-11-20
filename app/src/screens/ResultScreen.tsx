@@ -2,7 +2,11 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { PlanResponse } from '../api/types';
 import { CoverageBar } from '../components/CoverageBar';
+import { OsmLoginCard } from '../components/OsmLoginCard';
+import { QuestionPopup } from '../components/QuestionPopup';
 import { RouteMap } from '../components/RouteMap';
+import { useOsmAccount } from '../osm/useOsmAccount';
+import { useStreetQuestions, type WalkStatus } from '../osm/useStreetQuestions';
 import { Button, Card, Notices, SectionTitle } from '../components/ui';
 import { minutes, skippedSentence } from '../format';
 import { colors, radius, space } from '../theme';
@@ -11,14 +15,35 @@ export function ResultScreen(props: { plan: PlanResponse; onEdit: () => void; on
   const { plan } = props;
   const t = plan.totals;
   const over = t.budgetMinutes !== null && !t.withinBudget;
+  const osm = useOsmAccount();
+  const walk = useStreetQuestions({
+    // Questions only for users logged in to OpenStreetMap.
+    questions: osm.session ? plan.questions : undefined,
+    token: osm.session?.token ?? null,
+    onLoginExpired: osm.logout,
+  });
 
   return (
     <View style={{ flex: 1 }}>
       <View style={styles.map}>
-        <RouteMap plan={plan} />
+        <RouteMap plan={plan} showUser={walk.walking} highlight={walk.active?.street.segments} />
       </View>
 
       <ScrollView style={styles.panel} contentContainerStyle={styles.panelContent}>
+        <Card>
+          <Button
+            title={walk.walking ? 'End walk' : 'Start walk'}
+            kind={walk.walking ? 'secondary' : 'primary'}
+            onPress={walk.walking ? walk.stop : walk.start}
+            loading={walk.status.kind === 'sending'}
+          />
+          <WalkStatusLine status={walk.status} canAsk={walk.canAsk} answered={walk.answeredCount} onRetry={walk.retry} />
+        </Card>
+
+        {osm.config?.enabled ? (
+          <OsmLoginCard config={osm.config} session={osm.session} onLogin={osm.login} onLogout={osm.logout} />
+        ) : null}
+
         <Card style={over ? styles.overCard : undefined}>
           <Text style={styles.totalLine}>
             {minutes(t.walkMinutes)} walking + {minutes(t.stayMinutes)} stays ={' '}
@@ -91,8 +116,49 @@ export function ResultScreen(props: { plan: PlanResponse; onEdit: () => void; on
           <Button title="New plan" onPress={props.onNew} style={{ flex: 1 }} />
         </View>
       </ScrollView>
+
+      {walk.active && plan.questions ? (
+        <QuestionPopup question={walk.active} seconds={plan.questions.rules.showSeconds} onAnswer={walk.answer} />
+      ) : null}
     </View>
   );
+}
+
+function WalkStatusLine(props: { status: WalkStatus; canAsk: boolean; answered: number; onRetry: () => void }) {
+  const { status } = props;
+  let text: string | null = null;
+  switch (status.kind) {
+    case 'walking':
+      text = props.canAsk
+        ? `Following your walk. ${props.answered} street answer${props.answered === 1 ? '' : 's'} so far.`
+        : 'Following your walk.';
+      break;
+    case 'no-permission':
+      text = 'Location permission is needed to follow the walk.';
+      break;
+    case 'sending':
+      text = 'Sending your answers…';
+      break;
+    case 'sent': {
+      const r = status.result;
+      const n = r.applied.length;
+      const what = `${n} street answer${n === 1 ? '' : 's'}`;
+      text =
+        r.mode === 'upload'
+          ? `Thank you! ${what} added to OpenStreetMap (changeset ${r.changesetId}).`
+          : `Thank you! ${what} saved (dry run: not uploaded to OpenStreetMap).`;
+      if (r.skipped.length) text += ` ${r.skipped.length} skipped: ${r.skipped.map((x) => x.reason).join('; ')}.`;
+      break;
+    }
+    case 'error':
+      return (
+        <View>
+          <Text style={[styles.muted, { color: colors.danger }]}>{status.message}</Text>
+          <Button title="Try again" kind="secondary" small onPress={props.onRetry} style={{ marginTop: space.xs, alignSelf: 'flex-start' }} />
+        </View>
+      );
+  }
+  return text ? <Text style={[styles.muted, { marginTop: space.sm }]}>{text}</Text> : null;
 }
 
 const styles = StyleSheet.create({
