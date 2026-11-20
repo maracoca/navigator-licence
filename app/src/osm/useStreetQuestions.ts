@@ -4,6 +4,7 @@ import * as Location from 'expo-location';
 import * as api from '../api/client';
 import type { StreetAnswer, StreetQuestion, StreetQuestions, UploadResult } from '../api/types';
 import { isDark, meters, metersToLine, type Pt } from './geo';
+import { ensureLocation } from '../location';
 
 /** A question on screen: which street, and how it is worded (depends on daylight). */
 export interface ActiveQuestion {
@@ -14,7 +15,7 @@ export interface ActiveQuestion {
 export type WalkStatus =
   | { kind: 'idle' }
   | { kind: 'walking' }
-  | { kind: 'no-permission' }
+  | { kind: 'no-location'; message: string; openSettings: boolean }
   | { kind: 'sending' }
   | { kind: 'sent'; result: UploadResult }
   | { kind: 'error'; message: string };
@@ -114,16 +115,25 @@ export function useStreetQuestions(opts: {
     let sub: Location.LocationSubscription | null = null;
     let cancelled = false;
     (async () => {
-      const perm = await Location.requestForegroundPermissionsAsync();
-      if (perm.status !== 'granted') {
+      const problem = await ensureLocation();
+      if (problem) {
         if (!cancelled) {
           setWalking(false);
-          setStatus({ kind: 'no-permission' });
+          setStatus({ kind: 'no-location', ...problem });
         }
         return;
       }
-      sub = await Location.watchPositionAsync({ accuracy: Location.Accuracy.High, distanceInterval: 5 }, onFix);
-      if (cancelled) sub.remove();
+      try {
+        sub = await Location.watchPositionAsync({ accuracy: Location.Accuracy.High, distanceInterval: 5 }, onFix, (reason) =>
+          setStatus({ kind: 'no-location', message: `GPS stopped: ${reason}`, openSettings: false }),
+        );
+        if (cancelled) sub.remove();
+      } catch (e) {
+        if (!cancelled) {
+          setWalking(false);
+          setStatus({ kind: 'no-location', message: `Could not start GPS: ${e instanceof Error ? e.message : 'unknown error'}`, openSettings: false });
+        }
+      }
     })();
     return () => {
       cancelled = true;

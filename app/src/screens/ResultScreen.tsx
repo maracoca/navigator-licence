@@ -5,6 +5,7 @@ import { CoverageBar } from '../components/CoverageBar';
 import { OsmLoginCard } from '../components/OsmLoginCard';
 import { QuestionPopup } from '../components/QuestionPopup';
 import { RouteMap } from '../components/RouteMap';
+import { openSettings } from '../location';
 import { useOsmAccount } from '../osm/useOsmAccount';
 import { useStreetQuestions, type WalkStatus } from '../osm/useStreetQuestions';
 import { Button, Card, Notices, SectionTitle } from '../components/ui';
@@ -133,9 +134,15 @@ function WalkStatusLine(props: { status: WalkStatus; canAsk: boolean; answered: 
         ? `Following your walk. ${props.answered} street answer${props.answered === 1 ? '' : 's'} so far.`
         : 'Following your walk.';
       break;
-    case 'no-permission':
-      text = 'Location permission is needed to follow the walk.';
-      break;
+    case 'no-location':
+      return (
+        <View>
+          <Text style={[styles.muted, { color: colors.danger, marginTop: space.sm }]}>{status.message}</Text>
+          {status.openSettings ? (
+            <Button title="Open Settings" kind="secondary" small onPress={openSettings} style={{ marginTop: space.xs, alignSelf: 'flex-start' }} />
+          ) : null}
+        </View>
+      );
     case 'sending':
       text = 'Sending your answers…';
       break;

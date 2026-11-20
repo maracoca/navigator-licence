@@ -8,7 +8,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import * as Location from 'expo-location';
+import { currentPosition, ensureLocation, openSettings } from '../location';
 import type { PlaceInput } from '../api/types';
 import { MOCK } from '../api/client';
 import { Button, ErrorBox } from '../components/ui';
@@ -56,20 +56,23 @@ export function PlanInputScreen(props: {
   const set = (patch: Partial<PlanForm>) => onChange({ ...form, ...patch });
   const [locating, setLocating] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [needsSettings, setNeedsSettings] = useState(false);
 
   async function useMyLocation() {
     setLocalError(null);
+    setNeedsSettings(false);
     setLocating(true);
     try {
-      const perm = await Location.requestForegroundPermissionsAsync();
-      if (perm.status !== 'granted') {
-        setLocalError('Location permission was not granted. Type a starting point instead.');
+      const problem = await ensureLocation();
+      if (problem) {
+        setLocalError(`${problem.message} Or type a starting point instead.`);
+        setNeedsSettings(problem.openSettings);
         return;
       }
-      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const pos = await currentPosition();
       set({ originCoords: { lat: pos.coords.latitude, lng: pos.coords.longitude }, origin: '' });
-    } catch {
-      setLocalError('Could not get your location. Type a starting point instead.');
+    } catch (e) {
+      setLocalError(`Could not get your location${e instanceof Error ? `: ${e.message}` : '.'} Type a starting point instead.`);
     } finally {
       setLocating(false);
     }
@@ -153,6 +156,9 @@ export function PlanInputScreen(props: {
 
         <View style={{ height: space.lg }} />
         <ErrorBox message={localError ?? props.error} />
+        {needsSettings ? (
+          <Button title="Open Settings" kind="secondary" small onPress={openSettings} style={{ marginBottom: space.md, alignSelf: 'flex-start' }} />
+        ) : null}
         <Button title="Next" onPress={next} loading={props.loading} />
       </ScrollView>
     </KeyboardAvoidingView>
